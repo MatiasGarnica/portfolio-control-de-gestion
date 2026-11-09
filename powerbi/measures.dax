@@ -1,0 +1,290 @@
+/* =============================================================================
+   measures.dax  ·  Módulo 07 · Cobranzas (Power BI)
+   -----------------------------------------------------------------------------
+   17 medidas en 6 secciones. Corren contra el dataset sintético AQUANORTE_DEMO
+   (ver ../data/README.md y ../docs/data_dictionary.md).
+
+   MODELO ASUMIDO (estrella simple, filtros de dimensión hacia hechos)
+     Hecho  : MovTes            (FchMov, CodCpt, Import, DebHab, NroCta, Refern)
+     Dim    : CptTes            (Codigo, Descrp)        1 -> *  MovTes[CodCpt]
+     Dim    : repartos          (Codigo, Descrp, Sucursal)  1 -> *  MovTes[RUTA]
+     Dim    : Calendario        (Fecha)                 1 -> *  MovTes[FchMov]
+
+   TABLAS / COLUMNAS QUE NO ESTÁN EN EL DICCIONARIO (se usa la más cercana)
+     1) MovTes[RUTA]  : MovTes no trae vendedor. La columna se calcula en Power
+        Query con la misma lógica de ../sql/07_collections/
+        cobranzas_mensuales_por_ruta.sql (EFE: dígitos finales de Refern;
+        resto: ruta del cliente vía ClientesRutas -> Rutas[Vnddor]).
+        Se relaciona con repartos[Codigo].
+     2) Calendario    : tabla de fechas, no existe en el diccionario. Se crea en
+        DAX con CALENDAR/CALENDARAUTO y se marca como tabla de fechas. La
+        columna MovTes[FchMov] debe ser tipo fecha (sin hora) para relacionarla.
+     3) CptTes[CostoPct] : tasa de costo por medio de pago (p. ej. EFE 0,50%;
+        DIG 2,50%; TRF 0,10%; CHQ 0,30%; RET 0%). Es un supuesto de negocio,
+        no un dato del dataset: se agrega como columna personalizada en
+        Power Query (o como tabla aparte relacionada por CptTes[Codigo]).
+     4) Región        : no hay tabla de regiones; se usa repartos[Sucursal]
+        como la dimensión más cercana.
+     5) MovTes[NroCta] es VARCHAR(10) y Clientes[NroCta] es NUMERIC(15,0):
+        convertir el tipo en Power Query si se relaciona con Clientes.
+
+   Convenciones: MovTes[DebHab] = "D" son ingresos; CCB y CPA son compensaciones
+   internas entre cajas y nunca cuentan como cobranza.
+============================================================================= */
+
+
+/* =============================================================================
+   SECCIÓN 1 · BASE DE COBRANZA
+   Pregunta: ¿cuánto dinero ingresó realmente?
+============================================================================= */
+
+-- Qué calcula : importe total de ingresos (débitos) de tesorería, sin las
+--               compensaciones internas CCB/CPA.
+-- Decisión    : base de todo el tablero; Tesorería la compara contra la
+--               cobranza proyectada del período.
+-- Nota        : KEEPFILTERS respeta el filtro de medio de pago que ponga el
+--               usuario en lugar de reemplazarlo.
+Total Cobrado =
+CALCULATE (
+    SUM ( MovTes[Import] ),
+    MovTes[DebHab] = "D",
+    KEEPFILTERS ( NOT CptTes[Codigo] IN { "CCB", "CPA" } )
+)
+
+-- Qué calcula : cobranza real sin retenciones impositivas (RET).
+--               Las retenciones no son dinero disponible ni tienen costo.
+-- Decisión    : denominador correcto para medir el costo de cobrar y la
+--               efectividad real de los vendedores.
+Cobrado sin Retenciones =
+CALCULATE (
+    [Total Cobrado],
+    KEEPFILTERS ( CptTes[Codigo] <> "RET" )
+)
+
+
+/* =============================================================================
+   SECCIÓN 2 · MIX DE MEDIOS DE PAGO  (CALCULATE + FILTER + ALL: lógica OR)
+   Pregunta: ¿qué regiones dependen del efectivo y cuánto migra a digital?
+   Nota: los porcentajes ignoran el filtro de medio de pago (el denominador es
+   el total de todos los medios), por lo que no conviene segmentarlos por
+   medio de pago en el mismo visual.
+============================================================================= */
+
+-- Qué calcula : cobranza de los medios digitales tratados como UN grupo
+--               (pago digital DIG + tarjeta TRJ). FILTER sobre ALL arma la
+--               condición OR "Codigo = DIG o Codigo = TRJ" y a la vez ignora
+--               el filtro de medio de pago del contexto.
+-- Decisión    : medir la adopción digital por región para decidir dónde
+--               impulsar canales electrónicos.
+Cobrado Digital =
+CALCULATE (
+    [Total Cobrado],
+    FILTER (
+        ALL ( CptTes[Codigo] ),
+        CptTes[Codigo] IN { "DIG", "TRJ" }
+    )
+)
+
+-- Qué calcula : participación del efectivo sobre el total cobrado.
+-- Decisión    : regiones "cash-rich" -> más vendedores de cobranza en calle y
+--               mayor atención al riesgo de manejo de efectivo.
+% Efe/Total =
+VAR Efectivo =
+    CALCULATE (
+        [Total Cobrado],
+        FILTER ( ALL ( CptTes[Codigo] ), CptTes[Codigo] = "EFE" )
+    )
+VAR Total =
+    CALCULATE ( [Total Cobrado], REMOVEFILTERS ( CptTes ) )
+RETURN
+    DIVIDE ( Efectivo, Total )
+
+-- Qué calcula : participación del grupo digital sobre el total cobrado.
+-- Decisión    : detectar caídas de un canal (p. ej. falla de la pasarela) y
+--               seguir la migración mensual hacia digital.
+% Digitales =
+DIVIDE (
+    [Cobrado Digital],
+    CALCULATE ( [Total Cobrado], REMOVEFILTERS ( CptTes ) )
+)
+
+-- Qué calcula : participación de cheques sobre el total cobrado. Mismo patrón
+--               para % Transferencia (TRF) y % Retenciones (RET), que se
+--               obtienen cambiando el código del medio.
+-- Decisión    : controlar cartera en cheques (riesgo de rechazo y demora de
+--               acreditación) por región.
+% Cheques =
+DIVIDE (
+    CALCULATE (
+        [Total Cobrado],
+        FILTER ( ALL ( CptTes[Codigo] ), CptTes[Codigo] = "CHQ" )
+    ),
+    CALCULATE ( [Total Cobrado], REMOVEFILTERS ( CptTes ) )
+)
+
+-- Qué calcula : participación de transferencias bancarias (TRF) sobre el total.
+-- Decisión    : seguir el canal bancario y detectar demoras de conciliación.
+% Transferencia =
+DIVIDE (
+    CALCULATE (
+        [Total Cobrado],
+        FILTER ( ALL ( CptTes[Codigo] ), CptTes[Codigo] = "TRF" )
+    ),
+    CALCULATE ( [Total Cobrado], REMOVEFILTERS ( CptTes ) )
+)
+
+-- Qué calcula : participación de todo lo que NO es efectivo (total menos EFE).
+--               Es el complemento de [% Efe/Total].
+-- Decisión    : lectura rápida de cuánta cobranza ya circula por canales
+--               bancarios o digitales.
+% Resto/Total =
+VAR Total =
+    CALCULATE ( [Total Cobrado], REMOVEFILTERS ( CptTes ) )
+VAR Efectivo =
+    CALCULATE (
+        [Total Cobrado],
+        FILTER ( ALL ( CptTes[Codigo] ), CptTes[Codigo] = "EFE" )
+    )
+RETURN
+    DIVIDE ( Total - Efectivo, Total )
+
+
+/* =============================================================================
+   SECCIÓN 3 · COMPARACIÓN TEMPORAL Y DÍAS CALLE  (VAR / RETURN)
+   Pregunta: ¿la cobranza crece o cae? ¿cuántos días tardamos en cobrar?
+============================================================================= */
+
+-- Qué calcula : variación porcentual de la cobranza contra el mes anterior.
+--               Las VAR separan los pasos (actual, anterior) y se evalúan una
+--               sola vez cada una. Requiere la tabla Calendario (ver arriba).
+--               Si el mes anterior no tiene datos, DIVIDE devuelve BLANK.
+-- Decisión    : alertar a Finanzas ante caídas sostenidas antes del cierre.
+Var % vs Mes Anterior =
+VAR Actual = [Total Cobrado]
+VAR Anterior =
+    CALCULATE ( [Total Cobrado], DATEADD ( Calendario[Fecha], -1, MONTH ) )
+RETURN
+    DIVIDE ( Actual - Anterior, Anterior )
+
+-- Qué calcula : días de venta que representa la deuda pendiente (DSO):
+--               Deuda Total / venta neta diaria. Se resuelve con VAR en vez de
+--               medidas auxiliares:
+--                 Deuda      = saldo acumulado de CtaCteVT hasta el fin del
+--                              período (facturas positivas; recibos y notas
+--                              de crédito vienen con Import negativo).
+--                 Ventas     = facturas + notas de crédito del período.
+--                 Dias       = días distintos con facturación en el período
+--                              (aproxima los días trabajados; no hay
+--                              calendario laboral en el dataset).
+-- Requiere    : CtaCteVT[FchMov] como fecha (sin hora) relacionada con
+--               Calendario[Fecha]. CtaCteVT no tiene ruta ni vendedor, así que
+--               no se segmenta por repartos; para región habría que relacionar
+--               CtaCteVT[NroCta] con Clientes (convertir el tipo, ver cabecera).
+-- Decisión    : un DSO que sube mes a mes señala problema de política de
+--               crédito o de calidad de cartera antes de que haya incobrables.
+Dias Calle =
+VAR FinPeriodo = MAX ( Calendario[Fecha] )
+VAR Deuda =
+    CALCULATE (
+        SUM ( CtaCteVT[Import] ),
+        REMOVEFILTERS ( Calendario ),
+        Calendario[Fecha] <= FinPeriodo
+    )
+VAR Ventas =
+    CALCULATE ( SUM ( CtaCteVT[Import] ), CtaCteVT[CodMov] IN { "FACA", "NCA" } )
+VAR Dias =
+    CALCULATE ( DISTINCTCOUNT ( CtaCteVT[FchMov] ), CtaCteVT[CodMov] = "FACA" )
+RETURN
+    DIVIDE ( Deuda, DIVIDE ( Ventas, Dias ) )
+
+
+/* =============================================================================
+   SECCIÓN 4 · GANADOR DEL CONTEXTO  (ADDCOLUMNS + TOPN + MAXX)
+   Pregunta: ¿qué medio de pago domina en cada vendedor / región?
+============================================================================= */
+
+-- Qué calcula : nombre del medio de pago con mayor cobranza en el contexto
+--               actual (vendedor, región, mes). ADDCOLUMNS agrega el monto a
+--               cada medio (transición de contexto: [Total Cobrado] se evalúa
+--               por fila), TOPN se queda con el mayor y MAXX devuelve su
+--               nombre como escalar. Ante empate devuelve el primero en orden
+--               alfabético (MAXX sobre texto).
+-- Decisión    : perfilar el vendedor por su mix (¿depende de medios caros?).
+Medio Dominante =
+VAR Medios =
+    ADDCOLUMNS ( VALUES ( CptTes[Descrp] ), "@Monto", [Total Cobrado] )
+VAR Ganador =
+    TOPN ( 1, Medios, [@Monto], DESC )
+RETURN
+    IF ( ISBLANK ( [Total Cobrado] ), BLANK (), MAXX ( Ganador, CptTes[Descrp] ) )
+
+-- Qué calcula : qué porcentaje del total representa ese medio dominante.
+-- Decisión    : un 90 % indica dependencia fuerte de un solo canal; menos de
+--               50 % indica un mix diversificado.
+% Medio Dominante =
+VAR Medios =
+    ADDCOLUMNS ( VALUES ( CptTes[Descrp] ), "@Monto", [Total Cobrado] )
+VAR Ganador =
+    TOPN ( 1, Medios, [@Monto], DESC )
+RETURN
+    DIVIDE ( MAXX ( Ganador, [@Monto] ), [Total Cobrado] )
+
+
+/* =============================================================================
+   SECCIÓN 5 · COSTO DE COBRANZA  (SUMX + RELATED, transición de contexto)
+   Pregunta: ¿qué vendedores cobran por encima de la tolerancia de costo?
+   Requiere CptTes[CostoPct] (supuesto, ver cabecera).
+============================================================================= */
+
+-- Qué calcula : costo estimado de cobrar = suma, línea a línea, del importe
+--               por la tasa de costo de su medio de pago. SUMX itera MovTes y
+--               RELATED trae la tasa desde CptTes en cada fila.
+-- Decisión    : cuantificar el costo financiero del mix de medios.
+Costo Cobranza =
+SUMX (
+    FILTER ( MovTes, MovTes[DebHab] = "D" ),
+    MovTes[Import] * RELATED ( CptTes[CostoPct] )
+)
+
+-- Qué calcula : costo como porcentaje de la cobranza real (sin retenciones).
+--               DIVIDE con resultado alternativo 0 evita errores y celdas
+--               vacías cuando no hubo cobranza.
+-- Decisión    : ranking de vendedores y comparación contra el umbral de 2 %.
+% Costo / Cob. Real =
+DIVIDE ( [Costo Cobranza], [Cobrado sin Retenciones], 0 )
+
+-- Qué calcula : cantidad de vendedores cuyo % de costo supera el umbral.
+--               ADDCOLUMNS recorre cada vendedor y [% Costo / Cob. Real] se
+--               reevalúa por fila (transición de contexto); luego se cuentan
+--               los que superan el umbral definido en la VAR.
+-- Decisión    : dimensionar cuántos vendedores requieren coaching o revisión
+--               de territorio.
+Vendedores sobre Umbral =
+VAR Umbral = 0.02
+VAR Vendedores =
+    ADDCOLUMNS ( VALUES ( repartos[Codigo] ), "@PctCosto", [% Costo / Cob. Real] )
+RETURN
+    COUNTROWS ( FILTER ( Vendedores, [@PctCosto] > Umbral ) )
+
+
+/* =============================================================================
+   SECCIÓN 6 · TOTALES INMUNES A FILTROS  (REMOVEFILTERS)
+   Pregunta: ¿qué peso tiene cada vendedor / región dentro del total?
+============================================================================= */
+
+-- Qué calcula : cobranza total del período ignorando los filtros de vendedor
+--               y de medio de pago (la fecha se conserva). Es el denominador
+--               estable para participaciones.
+-- Decisión    : base para comparar contra el total aunque se segmente.
+Total Cobrado Global =
+CALCULATE (
+    [Total Cobrado],
+    REMOVEFILTERS ( repartos ),
+    REMOVEFILTERS ( CptTes )
+)
+
+-- Qué calcula : participación de la selección actual en el total global.
+-- Decisión    : identificar concentración de la cobranza en pocos vendedores
+--               o regiones.
+% Participación en Total =
+DIVIDE ( [Total Cobrado], [Total Cobrado Global] )

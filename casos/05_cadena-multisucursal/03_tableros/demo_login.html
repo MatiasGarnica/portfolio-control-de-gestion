@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo con login</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
+  --s1: #2a78d6; --pos: #2a78d6; --neg: #e34948; --total: #898781;
+  --good: #006300; --bad: #d03b3b; --band: rgba(42,120,214,.08); --sel: rgba(42,120,214,.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+    --s1: #3987e5; --pos: #3987e5; --neg: #e66767; --total: #898781;
+    --good: #0ca30c; --bad: #e66767; --band: rgba(57,135,229,.12); --sel: rgba(57,135,229,.16);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
+  --s1: #3987e5; --pos: #3987e5; --neg: #e66767; --total: #898781;
+  --good: #0ca30c; --bad: #e66767; --band: rgba(57,135,229,.12); --sel: rgba(57,135,229,.16);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+h2 { font-size: 17px; margin: 0; font-weight: 650; }
+h3 { font-size: 14px; margin: 0 0 8px; font-weight: 600; color: var(--ink2); }
+.sub { color: var(--ink2); font-size: 13px; }
+button, select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; }
+.filtros { position: sticky; top: 0; z-index: 5; background: var(--page); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 12px 0; margin: 12px 0 4px; border-bottom: 1px solid var(--border); }
+.filtros label { font-size: 13px; color: var(--ink2); display: flex; gap: 6px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 6px 10px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+section { margin-top: 28px; }
+.nivel { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.nivel .tag { font-size: 12px; font-weight: 650; color: var(--s1); text-transform: uppercase; letter-spacing: .04em; }
+.titular { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 15px; }
+.titular strong { font-weight: 650; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.tile .k { font-size: 13px; color: var(--ink2); }
+.tile .v { font-size: clamp(20px, 5vw, 26px); font-weight: 650; margin: 2px 0; }
+.tile .d { font-size: 13px; color: var(--ink2); }
+.up { color: var(--good); } .down { color: var(--bad); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 860px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-width: 0; }
+.card-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.card-h h3 { margin: 0; }
+.nota { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); margin: 2px 0 6px; }
+.leyenda i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.leyenda i.sq { height: 10px; width: 10px; }
+svg { display: block; overflow: visible; }
+svg text { font-family: inherit; }
+.chart { width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th { white-space: normal; }
+th { color: var(--ink2); font-weight: 600; font-size: 12px; }
+th:first-child, td:first-child { text-align: left; }
+td.txt, th.txt { text-align: left; font-variant-numeric: normal; white-space: normal; }
+tr.tot td { font-weight: 650; border-top: 1px solid var(--axis); }
+.scroll { overflow-x: auto; }
+.oculto { display: none; }
+.lnk { background: none; border: 0; color: var(--s1); padding: 2px 4px; font-size: 13px; }
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,.12); max-width: 280px; opacity: 0; transition: opacity .08s; }
+#tip b { font-weight: 650; }
+footer { margin-top: 36px; font-size: 12.5px; color: var(--ink2); border-top: 1px solid var(--border); padding-top: 14px; }
+footer p { margin: 4px 0; }
+.chip { display: inline-block; font-size: 11px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; color: var(--ink2); }
+
+/* ---- Rediseño: tema claro con contraste + marca ---- */
+:root { --brand: #9a3412; --brand2: #ea580c; }
+:root:not([data-theme="dark"]) { --page: #eef1f5; --surface: #ffffff; --border: #d6dbe3; --grid: #e7eaef; --thead: #f3f5f8; --zebra: #fafbfc; }
+:root[data-theme="dark"] { --thead: #222220; --zebra: #1e1e1d; }
+.card, .tile, .titular { border-color: var(--border); box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 3px 8px rgba(16,24,40,.06); }
+.tile { border-top: 3px solid var(--brand2); }
+.tile .d { line-height: 1.6; }
+.nivel { border-left: 4px solid var(--brand2); padding-left: 10px; }
+.nivel .tag { color: var(--brand); }
+.seg button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+th { background: var(--thead); }
+tbody tr:nth-child(even) td { background: var(--zebra); }
+.filtros { background: var(--page); }
+header.marca { position: relative; overflow: hidden; border-radius: 14px; padding: 16px 18px; color: #fff;
+  background: linear-gradient(120deg, var(--brand), var(--brand2), var(--brand)); background-size: 220% 220%;
+  animation: brillo 14s ease-in-out infinite alternate; box-shadow: 0 4px 14px rgba(16,24,40,.12); }
+header.marca .sub { color: rgba(255,255,255,.88); }
+header.marca h1 { color: #fff; }
+.marca-id { display: flex; align-items: center; gap: 14px; }
+.logo { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.16); animation: aparecer .7s ease-out both; }
+.logo svg { width: 30px; height: 30px; }
+.marca-acc { display: flex; gap: 8px; align-items: center; }
+.marca-acc label { font-size: 13px; color: rgba(255,255,255,.9); display: flex; gap: 6px; align-items: center; }
+.marca-acc select, .marca-acc button { background: rgba(255,255,255,.95); color: #0b0b0b; border-color: transparent; }
+@keyframes brillo { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+@keyframes aparecer { from { transform: scale(.6) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { header.marca, .logo { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="sesion" role="status"></div>
+  <header class="marca">
+    <div class="marca-id"><span id="logo" class="logo" aria-hidden="true"></span>
+      <div><h1 id="marca-nombre">Cadena Demo S.A.</h1>
+      <div class="sub">Tablero de gestión · 12 locales · 3 regiones · empresa, marca y datos <b>ficticios</b></div></div></div>
+    <div class="marca-acc"><label>Marca <select id="f-marca" aria-label="Elegir marca"></select></label>
+      <button id="tema" type="button" aria-label="Cambiar tema claro u oscuro">◐ Tema</button></div>
+  </header>
+
+  <div class="filtros" role="group" aria-label="Filtros">
+    <label>Período <select id="f-periodo"></select></label>
+    <span class="seg" role="group" aria-label="Moneda">
+      <button type="button" data-moneda="nom" aria-pressed="true">Pesos nominales</button>
+      <button type="button" data-moneda="const" aria-pressed="false">Moneda constante</button>
+    </span>
+    <label>Local <select id="f-local"></select></label>
+  </div>
+
+  <section id="solo-incidentes"><div class="nivel"><span class="tag">Supervisor</span><h2>Incidentes de tu local</h2></div>
+    <div class="card scroll"><table><thead><tr><th class="txt">Fecha</th><th class="txt">Local</th><th class="txt">Tipo</th><th>Horas</th><th class="txt">Detalle</th></tr></thead><tbody></tbody></table>
+    <div class="nota">Tu rol ve los incidentes y carga lo que dice la primera línea, pero no los resultados económicos: la base no te los manda.</div></div>
+    <div class="card" id="fb-sup" style="margin-top:14px"></div></section>
+  <section id="n1" aria-labelledby="t-n1">
+    <div class="nivel"><span class="tag">Nivel 1</span><h2 id="t-n1">Tu alcance: ¿cómo está y dónde está el desvío?</h2></div>
+    <div class="titular" id="titular"></div>
+    <div class="tiles" id="tiles1"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><h3>Desvío de contribución contra presupuesto, por local</h3><button class="lnk" data-tabla="rk">Ver tabla</button></div>
+        <div class="leyenda"><span><i class="sq" style="background:var(--pos)"></i>A favor</span><span><i class="sq" style="background:var(--neg)"></i>En contra</span><span><i class="sq" style="background:var(--total)"></i>Menos de ±5 % (no material)</span><span>Hacé clic en un local para abrirlo abajo</span></div>
+        <div id="rk" class="chart"></div>
+        <div id="rk-t" class="scroll oculto"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Contribución por mes (tu alcance)</h3><button class="lnk" data-tabla="tr">Ver tabla</button></div>
+        <div class="leyenda"><span><i style="background:var(--s1)"></i>Real</span><span><i style="background:var(--muted)"></i>Presupuesto</span><span><i class="sq" style="background:var(--band)"></i>Período elegido</span></div>
+        <div id="tr" class="chart"></div>
+        <div id="tr-t" class="scroll oculto"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="n2" aria-labelledby="t-n2">
+    <div class="nivel"><span class="tag">Nivel 2</span><h2 id="t-n2"></h2></div>
+    <div class="tiles" id="tiles2"></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><h3>Puente: del presupuesto al real (contribución)</h3></div>
+        <div class="leyenda"><span><i class="sq" style="background:var(--total)"></i>Total</span><span><i class="sq" style="background:var(--pos)"></i>Suma</span><span><i class="sq" style="background:var(--neg)"></i>Resta</span></div>
+        <div id="pu" class="chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h3>Estado de resultados del local</h3></div>
+        <div id="er" class="scroll"></div>
+        <div class="nota">Desvío expresado como efecto en la contribución: positivo = a favor. "Resto del formato" = los demás locales del mismo formato, sumados.</div>
+      </div>
+    </div>
+    <div class="card oculto" id="cm" style="margin-top:14px"></div>
+  </section>
+
+  <section id="n3" aria-labelledby="t-n3">
+    <div class="nivel"><span class="tag">Nivel 3</span><h2 id="t-n3">Causa: qué pasó adentro del local</h2></div>
+    <div class="leyenda"><span><i style="background:var(--s1)"></i>Este local</span><span><i style="background:var(--muted)"></i>Resto del formato</span><span><i class="sq" style="background:var(--band)"></i>Período elegido</span></div>
+    <div class="grid3" id="sm"></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="card"><div class="card-h"><h3>Nómina por puesto</h3></div><div id="nm" class="scroll"></div></div>
+      <div class="card"><div class="card-h"><h3>Incidentes registrados</h3></div><div id="ic" class="scroll"></div></div>
+    </div>
+    <div class="card oculto" id="fb" style="margin-top:14px"></div>
+  </section>
+
+  <footer>
+    <p><b>Datos ficticios.</b> La empresa, los locales y los números son inventados y tienen situaciones plantadas para el ejercicio.</p>
+    <p><b>Moneda constante:</b> el real se lleva a pesos de oct-2026 con el índice de precios real; el presupuesto, con la inflación que se supuso al armarlo. Así se separa "vendimos más caro" de "vendimos más".</p>
+    <p><b>Seguridad:</b> esta página no lleva datos adentro. Los pide a la base con tu sesión, y la base (seguridad por fila) devuelve solo lo que tu rol puede ver. Probá entrar con otro usuario: cambia lo que ves, no porque la página lo oculte, sino porque la base no lo manda.</p>
+  </footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script type="text/plain" id="app">
+const DATA = window.__DATOS;
+
+// ------------------------------------------------------------------ modelo
+const L = DATA.locales.map(([id, nombre, region, formato, m2, apertura]) => ({ id, nombre, region, formato, m2, apertura }));
+const R = DATA.rubros.map(([id, rubro, signo, grupo]) => ({ id, rubro, signo, grupo }));
+const CAL = DATA.cal.map(([p, ipc, ipcp]) => ({ p, ipc, ipcp }));
+const NP = CAL.length, LAST = NP - 1;
+const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const et = i => { const [y, m] = CAL[i].p.split('-'); return MES[m - 1] + '-' + y.slice(2); };
+const GRUPOS = ['Ventas', 'Costo de mercadería', 'Personal', 'Gastos de ocupación', 'Gastos operativos', 'Impuestos', 'Financiero'];
+const GCORTO = ['Ventas', 'Mercadería', 'Personal', 'Ocupación', 'Operativos', 'Impuestos', 'Financiero'];
+const SIG = Object.fromEntries(R.map(r => [r.id, r.signo]));
+const GR = Object.fromEntries(R.map(r => [r.id, r.grupo]));
+
+const RES = L.map(() => CAL.map(() => null));        // RES[l][p] = {rubro: [real, ppto]}
+for (const [p, l, r, real, ppto] of DATA.res) { (RES[l][p] ||= {})[r] = [real, ppto]; }
+const OP = L.map(() => CAL.map(() => null));
+for (const [p, l, tk, tp, dot, hs, bajas, tkp, tpp] of DATA.op) OP[l][p] = { tk, tp, dot, hs, bajas, tkp, tpp };
+
+const S = { periodo: 'ytd', moneda: 'nom', local: null };
+const UMBRAL = 0.05;   // desvío material: 5 % o más de la contribución presupuestada
+const material = x => Math.abs(x.cR - x.cP) >= UMBRAL * Math.abs(x.cP);
+const mesesDe = (desde, hasta) => CAL.map((c, i) => (c.p >= desde && c.p <= hasta) ? i : -1).filter(i => i >= 0);
+const PRESETS = [
+  { id: 'ytd', nombre: `Acumulado 2026 (${et(mesesDe('2026-01', '2026-12')[0])} a ${et(LAST)})`, m: mesesDe('2026-01', '2026-12') },
+  { id: 'u3', nombre: `Últimos 3 meses (${et(LAST - 2)} a ${et(LAST)})`, m: [LAST - 2, LAST - 1, LAST] },
+  { id: 'u1', nombre: `Último mes (${et(LAST)})`, m: [LAST] },
+  { id: 'a25', nombre: 'Año 2025', m: mesesDe('2025-01', '2025-12') },
+];
+const meses = () => PRESETS.find(x => x.id === S.periodo).m;
+const fR = i => S.moneda === 'const' ? CAL[LAST].ipc / CAL[i].ipc : 1;
+const fP = i => S.moneda === 'const' ? CAL[LAST].ipc / CAL[i].ipcp : 1;
+
+function sumar(locs, ms, monedaForzada) {
+  const prev = S.moneda; if (monedaForzada) S.moneda = monedaForzada;
+  const o = { rub: {}, grp: {}, vR: 0, vP: 0, cR: 0, cP: 0, abierto: false };
+  for (const r of R) o.rub[r.id] = { r: 0, p: 0 };
+  for (const g of GRUPOS) o.grp[g] = { r: 0, p: 0 };
+  for (const l of locs) for (const i of ms) {
+    const x = RES[l][i]; if (!x) continue; o.abierto = true;
+    for (const id in x) {
+      const r = x[id][0] * fR(i), p = x[id][1] * fP(i);
+      o.rub[id].r += r; o.rub[id].p += p;
+      o.grp[GR[id]].r += r * SIG[id]; o.grp[GR[id]].p += p * SIG[id];
+      o.cR += r * SIG[id]; o.cP += p * SIG[id];
+    }
+    o.vR += x[1][0] * fR(i); o.vP += x[1][1] * fP(i);
+  }
+  S.moneda = prev; return o;
+}
+const TODOS = L.map((_, i) => i);
+
+// ------------------------------------------------------------------ formato
+const nf1 = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const nf0 = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 });
+const M = v => '$ ' + nf1.format(v / 1e6) + ' M';
+const Mt = v => nf1.format(v / 1e6), Mts = v => (v >= 0 ? '+' : '−') + nf1.format(Math.abs(v) / 1e6);
+const Ms = v => (v >= 0 ? '+' : '−') + M(Math.abs(v)).replace('$ ', '$ ');
+const P = v => nf1.format(v * 100) + ' %';
+const PP = v => (v >= 0 ? '+' : '−') + nf1.format(Math.abs(v * 100)) + ' p.p.';
+const delta = (v, txt, bueno = v >= 0) => `<span class="${bueno ? 'up' : 'down'}">${bueno ? '▲' : '▼'} ${txt}</span>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const monedaTxt = () => S.moneda === 'const' ? 'moneda constante (pesos de ' + et(LAST) + ')' : 'pesos nominales';
+
+// ------------------------------------------------------------------ tooltip
+const tip = document.getElementById('tip');
+function showTip(html, x, y) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(window.innerWidth - w - 8, x + 14) + 'px';
+  tip.style.top = (y + h + 20 > window.innerHeight ? y - h - 12 : y + 14) + 'px';
+}
+const hideTip = () => { tip.style.opacity = 0; };
+document.addEventListener('mousemove', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (t) showTip(t.getAttribute('data-tip'), e.clientX, e.clientY); else if (!e.target.closest('.hover-capa')) hideTip();
+});
+document.addEventListener('focusin', e => {
+  const t = e.target.closest && e.target.closest('[data-tip]');
+  if (t) { const b = t.getBoundingClientRect(); showTip(t.getAttribute('data-tip'), b.right, b.top); }
+});
+document.addEventListener('focusout', hideTip);
+
+// ------------------------------------------------------------------ helpers SVG
+const svg = (w, h, body, label) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(label)}">${body}</svg>`;
+// barra con el extremo de datos redondeado (4px) y la base recta
+function barH(x0, x1, y, h, r = 4) {
+  const w = Math.abs(x1 - x0); r = Math.min(r, w, h / 2);
+  if (x1 >= x0) return `M${x0},${y}H${x1 - r}Q${x1},${y} ${x1},${y + r}V${y + h - r}Q${x1},${y + h} ${x1 - r},${y + h}H${x0}Z`;
+  return `M${x0},${y}H${x1 + r}Q${x1},${y} ${x1},${y + r}V${y + h - r}Q${x1},${y + h} ${x1 + r},${y + h}H${x0}Z`;
+}
+function barV(x, w, y0, y1, r = 4) {   // y0 = base, y1 = extremo
+  const h = Math.abs(y1 - y0); r = Math.min(r, h, w / 2);
+  if (y1 <= y0) return `M${x},${y0}V${y1 + r}Q${x},${y1} ${x + r},${y1}H${x + w - r}Q${x + w},${y1} ${x + w},${y1 + r}V${y0}Z`;
+  return `M${x},${y0}V${y1 - r}Q${x},${y1} ${x + r},${y1}H${x + w - r}Q${x + w},${y1} ${x + w},${y1 - r}V${y0}Z`;
+}
+function escala(min, max, n = 4) {
+  const span = max - min || 1, paso0 = span / n, mag = 10 ** Math.floor(Math.log10(paso0));
+  const paso = [1, 2, 2.5, 5, 10].map(k => k * mag).find(k => k >= paso0);
+  const ticks = []; for (let v = Math.floor(min / paso) * paso; v <= max + 1e-9; v += paso) ticks.push(v);
+  return ticks;
+}
+
+// ------------------------------------------------------------------ nivel 1
+function nivel1() {
+  const ms = meses(), red = sumar(TODOS, ms);
+  const redN = sumar(TODOS, ms, 'nom'), redC = sumar(TODOS, ms, 'const');
+  const filas = TODOS.map(l => ({ l, ...sumar([l], ms) })).filter(x => x.abierto);
+  filas.sort((a, b) => (a.cR - a.cP) - (b.cR - b.cP));
+  if (S.local === null) S.local = filas[0].l;
+  const dev = red.cR - red.cP, peores = filas.slice(0, 3), sumPeores = peores.reduce((s, x) => s + x.cR - x.cP, 0);
+  const pName = PRESETS.find(x => x.id === S.periodo).nombre;
+  let txt = `<strong>${pName}, en ${monedaTxt()}:</strong> ${window.__ALCANCE} está <strong>${Ms(dev)}</strong> ${dev >= 0 ? 'arriba' : 'abajo'} del presupuesto. `;
+  if (dev < 0 && filas.length >= 6 && sumPeores < dev * 0.7) txt += `Tres locales concentran el problema: ${peores.map(x => `<b>${L[x.l].id} ${esc(L[x.l].nombre)}</b> (${Ms(x.cR - x.cP)})`).join(', ')}. `;
+  const vN = redN.vR - redN.vP, vC = redC.vR - redC.vP;
+  if (vN > 0 && vC < 0) txt += `<br>Ojo con la inflación: en pesos nominales las ventas están ${Ms(vN)} arriba del presupuesto, pero en moneda constante están ${Ms(vC)} abajo. Vendimos más caro, no más.`;
+  document.getElementById('titular').innerHTML = txt;
+
+  const mR = red.cR / red.vR, mP = red.cP / red.vP;
+  const corrido = k => { const x = ms.map(i => i - k); return x.every(i => i >= 0) ? x : null; };
+  const mA = corrido(12), mP2 = corrido(ms.length);
+  const ant = mA ? sumar(TODOS, mA) : null, prv = mP2 ? sumar(TODOS, mP2) : null;
+  const nPrev = ms.length === 1 ? 'mes anterior' : (ms.length === 3 ? 'trimestre anterior' : `${ms.length} meses anteriores`);
+  const pct = (a, b) => b ? P(a / b - 1) : '—';
+  const lineas3 = (fmtDelta) => [
+    ['presupuesto', fmtDelta(red, 'P')], ['año anterior', ant ? fmtDelta(ant, 'R') : null], [nPrev, prv ? fmtDelta(prv, 'R') : null]
+  ].map(([n, x]) => x === null ? `<span class="nota" style="margin:0">vs ${n}: sin datos</span>` : delta(x[0], `${x[1]} vs ${n}`)).join('<br>');
+  document.getElementById('tiles1').innerHTML = [
+    ['Ventas', M(red.vR), lineas3((o, k) => k === 'P' ? [red.vR - red.vP, pct(red.vR, red.vP)] : [red.vR - o.vR, pct(red.vR, o.vR)])],
+    ['Contribución', M(red.cR), lineas3((o, k) => k === 'P' ? [dev, Ms(dev)] : [red.cR - o.cR, Ms(red.cR - o.cR)])],
+    ['Margen de contribución', P(mR), lineas3((o, k) => { const b = k === 'P' ? mP : o.cR / o.vR; return [mR - b, PP(mR - b)]; })],
+    ['Locales con desvío material en contra', `${filas.filter(x => x.cR < x.cP && material(x)).length} de ${filas.length}`, `<span>Peor: ${L[filas[0].l].id} ${esc(L[filas[0].l].nombre)}</span><br><span class="nota" style="margin:0">Comparar contra el año anterior evita confundir estacionalidad con desvío</span>`],
+  ].map(([k, v, d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+
+  // ranking divergente
+  const el = document.getElementById('rk'), W = Math.max(300, el.clientWidth), rowH = 30, labW = Math.min(172, W * 0.4);
+  const H = filas.length * rowH + 24, lim = Math.max(...filas.map(x => Math.abs(x.cR - x.cP))) || 1;
+  const x0 = labW + (W - labW) / 2, sx = v => x0 + v / lim * ((W - labW) / 2 - 62);
+  let b = `<line x1="${x0}" x2="${x0}" y1="0" y2="${H - 20}" stroke="var(--axis)"/>`;
+  filas.forEach((x, k) => {
+    const d = x.cR - x.cP, y = k * rowH + 4, sel = x.l === S.local, lo = L[x.l];
+    const t = `<b>${lo.id} ${esc(lo.nombre)}</b> · ${lo.formato}, ${lo.region}<br>Real ${M(x.cR)} · Ppto ${M(x.cP)}<br>Desvío <b>${Ms(d)}</b> (${P(d / Math.abs(x.cP))}) · Margen ${P(x.cR / x.vR)}${material(x) ? '' : '<br>Dentro del umbral: no requiere explicación'}${window.__DEMO ? window.__DEMO.resumen(lo.id) : ''}`;
+    b += `<g class="fila" data-local="${x.l}" data-tip="${esc(t)}" tabindex="0" role="button" aria-label="${esc(lo.id + ' ' + lo.nombre + ': desvío ' + Ms(d))}" style="cursor:pointer">`;
+    b += `<rect x="0" y="${y - 3}" width="${W}" height="${rowH - 2}" rx="6" fill="${sel ? 'var(--sel)' : 'transparent'}"/>`;
+    b += `<text x="6" y="${y + 15}" font-size="12.5" fill="var(--ink)" font-weight="${sel ? 650 : 400}">${lo.id} ${esc(W < 440 && lo.nombre.length > 13 ? lo.nombre.slice(0, 12) + '…' : lo.nombre)}</text>`;
+    b += `<path d="${barH(x0, sx(d), y + 3, 16)}" fill="${!material(x) ? 'var(--total)' : (d >= 0 ? 'var(--pos)' : 'var(--neg)')}"/>`;
+    b += `<text x="${d >= 0 ? sx(d) + 6 : sx(d) - 6}" y="${y + 15}" font-size="12" fill="var(--ink2)" text-anchor="${d >= 0 ? 'start' : 'end'}">${Ms(d).replace('$ ', '')}</text></g>`;
+  });
+  b += `<text x="${x0}" y="${H - 4}" font-size="11" fill="var(--muted)" text-anchor="middle">0 = en línea con el presupuesto</text>`;
+  el.innerHTML = svg(W, H, b, 'Ranking de locales por desvío de contribución contra presupuesto');
+  document.getElementById('rk-t').innerHTML = `<table><thead><tr><th>Local</th><th>Real (M$)</th><th>Ppto (M$)</th><th>Desvío (M$)</th><th>Margen</th></tr></thead><tbody>${filas.map(x => `<tr><td>${L[x.l].id} ${esc(L[x.l].nombre)}</td><td>${Mt(x.cR)}</td><td>${Mt(x.cP)}</td><td>${Mts(x.cR - x.cP)}</td><td>${P(x.cR / x.vR)}</td></tr>`).join('')}</tbody></table>`;
+
+  // tendencia mensual de la red
+  const serie = CAL.map((_, i) => { const s = sumar(TODOS, [i]); return { i, r: s.cR, p: s.cP }; });
+  lineas(document.getElementById('tr'), serie.map(s => ({ i: s.i, a: s.r, b: s.p })), {
+    fmt: v => '$ ' + nf0.format(v / 1e6) + ' M', nA: 'Real', nB: 'Presupuesto', alto: Math.max(260, filas.length * rowH - 20), etiquetas: true,
+    tipExtra: s => `Desvío <b>${Ms(s.a - s.b)}</b>`, label: 'Contribución mensual de la red, real contra presupuesto' });
+  document.getElementById('tr-t').innerHTML = `<table><thead><tr><th>Mes</th><th>Real</th><th>Presupuesto</th><th>Desvío</th></tr></thead><tbody>${serie.map(s => `<tr><td>${et(s.i)}</td><td>${M(s.r)}</td><td>${M(s.p)}</td><td>${Ms(s.r - s.p)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// gráfico de líneas genérico: una sola escala, crosshair + tooltip, banda del período elegido
+function lineas(el, datos, o) {
+  const W = Math.max(260, el.clientWidth), H = o.alto || 200, m = { l: 52, r: o.etiquetas ? 64 : 12, t: 10, b: 24 };
+  const vals = datos.flatMap(d => [d.a, d.b]).filter(v => v !== null && isFinite(v));
+  let mn = Math.min(...vals), mx = Math.max(...vals); if (o.desdeCero && mn > 0) mn = 0;
+  const ticks = escala(mn, mx, 4); mn = Math.min(mn, ticks[0]); mx = Math.max(mx, ticks[ticks.length - 1]);
+  const sx = i => m.l + i / (NP - 1) * (W - m.l - m.r), sy = v => m.t + (1 - (v - mn) / (mx - mn || 1)) * (H - m.t - m.b);
+  const ms = meses();
+  let b = `<rect x="${sx(ms[0]) - 4}" y="${m.t}" width="${sx(ms[ms.length - 1]) - sx(ms[0]) + 8}" height="${H - m.t - m.b}" fill="var(--band)"/>`;
+  for (const t of ticks) b += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)"/><text x="${m.l - 6}" y="${sy(t) + 4}" font-size="11" fill="var(--muted)" text-anchor="end">${o.fmt(t)}</text>`;
+  const pasoX = W < 440 ? 6 : 3;
+  for (let i = 0; i < NP; i += pasoX) b += `<text x="${sx(i)}" y="${H - 6}" font-size="11" fill="var(--muted)" text-anchor="middle">${et(i)}</text>`;
+  const path = k => { let d = '', pen = false; datos.forEach(x => { const v = x[k]; if (v === null || !isFinite(v)) { pen = false; return; } d += (pen ? 'L' : 'M') + sx(x.i) + ',' + sy(v); pen = true; }); return d; };
+  b += `<path d="${path('b')}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linejoin="round"/>`;
+  b += `<path d="${path('a')}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>`;
+  const ult = [...datos].reverse().find(x => x.a !== null && isFinite(x.a));
+  if (o.etiquetas && ult) {
+    const ya = sy(ult.a), yb = sy(ult.b), sep = Math.abs(ya - yb) < 14 ? (ya < yb ? -7 : 7) : 0;
+    b += `<text x="${sx(ult.i) + 6}" y="${ya + 4 + sep}" font-size="11" fill="var(--ink2)">${o.nA}</text><text x="${sx(ult.i) + 6}" y="${yb + 4 - sep}" font-size="11" fill="var(--ink2)">${o.nB}</text>`;
+  }
+  b += `<line class="cruz" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="var(--axis)" opacity="0"/><circle class="pa" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2" opacity="0"/><circle class="pb" r="4" fill="var(--muted)" stroke="var(--surface)" stroke-width="2" opacity="0"/>`;
+  b += `<rect class="hover-capa" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"/>`;
+  el.innerHTML = svg(W, H, b, o.label);
+  const s = el.querySelector('svg'), capa = s.querySelector('.hover-capa'), cruz = s.querySelector('.cruz'), pa = s.querySelector('.pa'), pb = s.querySelector('.pb');
+  capa.addEventListener('mousemove', e => {
+    const r = s.getBoundingClientRect(), i = Math.max(0, Math.min(NP - 1, Math.round((e.clientX - r.left - m.l) / (W - m.l - m.r) * (NP - 1))));
+    const x = datos.find(d => d.i === i); if (!x || x.a === null) { hideTip(); return; }
+    cruz.setAttribute('x1', sx(i)); cruz.setAttribute('x2', sx(i)); cruz.setAttribute('opacity', 1);
+    pa.setAttribute('cx', sx(i)); pa.setAttribute('cy', sy(x.a)); pa.setAttribute('opacity', 1);
+    pb.setAttribute('cx', sx(i)); pb.setAttribute('cy', sy(x.b)); pb.setAttribute('opacity', isFinite(x.b) ? 1 : 0);
+    showTip(`<b>${et(i)}</b><br>${o.nA}: ${o.fmtTip ? o.fmtTip(x.a) : o.fmt(x.a)}<br>${o.nB}: ${o.fmtTip ? o.fmtTip(x.b) : o.fmt(x.b)}${o.tipExtra ? '<br>' + o.tipExtra(x) : ''}`, e.clientX, e.clientY);
+  });
+  capa.addEventListener('mouseleave', () => { hideTip(); [cruz, pa, pb].forEach(n => n.setAttribute('opacity', 0)); });
+}
+
+// ------------------------------------------------------------------ nivel 2
+function participacion(l, ms, a) {
+  const f = L[l].formato, todosF = TODOS.filter(x => L[x].formato === f);
+  const veTodos = todosF.every(x => RES[x].some(v => v));
+  // mismos locales: solo los que ya estaban abiertos al inicio del período del año anterior (así una apertura no distorsiona)
+  const mA0 = ms[0] - 12, ids = mA0 >= 0 ? todosF.filter(x => L[x].apertura <= CAL[mA0].p) : todosF;
+  if (!ids.includes(l)) return [`Participación en ventas de su formato (${f})`, '—', '<span class="nota" style="margin:0">Local nuevo: todavía no tiene un año para comparar</span>'];
+  const ventasF = idx => {
+    if (veTodos) return sumar(ids, idx).vR;
+    const s = DATA.pf && DATA.pf[f]; if (!s) return null;
+    return idx.reduce((acc, i) => acc + (s[i] || 0) * fR(i), 0);
+  };
+  const tot = ventasF(ms), sh = tot ? a.vR / tot : null, nuevos = todosF.length - ids.length;
+  const mA = ms.map(i => i - 12), hayA = mA.every(i => i >= 0);
+  const totA = hayA ? ventasF(mA) : null, vA = hayA ? sumar([l], mA).vR : 0, shA = totA && vA ? vA / totA : null;
+  if (sh === null) return [`Participación en ventas de su formato (${f})`, '—', '<span class="nota" style="margin:0">Formato con menos de 3 locales: no se muestra para no delatar al otro local</span>'];
+  const aclara = veTodos && nuevos ? `<br><span class="nota" style="margin:0">Mismos locales: sin ${nuevos} local${nuevos > 1 ? 'es' : ''} abierto${nuevos > 1 ? 's' : ''} en el último año</span>` : (!veTodos ? '<br><span class="nota" style="margin:0">Total del formato agregado (incluye aperturas)</span>' : '');
+  return [`Participación en ventas de su formato (${f})`, P(sh), (shA ? delta(sh - shA, `${PP(sh - shA)} vs año anterior (${P(shA)})`) : '<span class="nota" style="margin:0">Sin año anterior para comparar</span>') + aclara];
+}
+function resto(l) { return TODOS.filter(x => x !== l && L[x].formato === L[l].formato); }
+function nivel2() {
+  const l = S.local, lo = L[l], ms = meses(), a = sumar([l], ms), rf = sumar(resto(l), ms);
+  document.getElementById('t-n2').textContent = `Local ${lo.id} ${lo.nombre} · ${lo.formato}, región ${lo.region}`;
+  if (!a.abierto) { document.getElementById('tiles2').innerHTML = '<div class="tile">El local no estaba abierto en este período.</div>'; return false; }
+  // efecto volumen / precio de las ventas
+  let vol = 0;
+  for (const i of ms) { const o = OP[l][i]; if (o) vol += (o.tk - o.tkp) * o.tpp * fP(i); }
+  const dv = a.vR - a.vP, pre = dv - vol;
+  const tk = ms.reduce((s, i) => s + (OP[l][i]?.tk || 0), 0), tkp = ms.reduce((s, i) => s + (OP[l][i]?.tkp || 0), 0);
+  document.getElementById('tiles2').innerHTML = [
+    ['Contribución', M(a.cR), delta(a.cR - a.cP, `${Ms(a.cR - a.cP)} contra presupuesto`)],
+    ['Desvío de ventas', Ms(dv), `<span>${P(dv / a.vP)} contra presupuesto</span>`],
+    ['Efecto volumen (tickets)', Ms(vol), delta(vol, `tickets ${P(tk / tkp - 1)} contra presupuesto`)],
+    ['Efecto precio (ticket promedio)', Ms(pre), `<span>Vender más caro${S.moneda === 'nom' ? ' (incluye inflación)' : ', ya sin inflación'}</span>`],
+    participacion(l, ms, a),
+  ].map(([k, v, d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+
+  // puente (cascada)
+  const el = document.getElementById('pu'), W = Math.max(300, el.clientWidth), H = 300, m = { l: 8, r: 8, t: 22, b: 40 };
+  const pasos = [{ n: 'Presup.', tot: a.cP }, ...GRUPOS.map((g, k) => ({ n: GCORTO[k], g, d: a.grp[g].r - a.grp[g].p })), { n: 'Real', tot: a.cR }];
+  let acc = a.cP; const tramos = pasos.map(s => { if ('tot' in s) return { ...s, y0: 0, y1: s.tot }; const t = { ...s, y0: acc, y1: acc + s.d }; acc += s.d; return t; });
+  const vals = tramos.flatMap(t => [t.y0, t.y1]), mn = Math.min(0, ...vals), mx = Math.max(...vals);
+  const sy = v => m.t + (1 - (v - mn) / (mx - mn || 1)) * (H - m.t - m.b), bw = (W - m.l - m.r) / tramos.length;
+  let b = `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(0)}" y2="${sy(0)}" stroke="var(--axis)"/>`;
+  tramos.forEach((t, k) => {
+    const x = m.l + k * bw + bw * 0.18, w = bw * 0.64, esTot = 'tot' in t, d = esTot ? t.tot : t.d;
+    const color = esTot ? 'var(--total)' : (d >= 0 ? 'var(--pos)' : 'var(--neg)');
+    const tipTxt = esTot ? `<b>Contribución ${t.n === 'Real' ? 'real' : 'presupuestada'}</b><br>${M(t.tot)}` : `<b>${t.g}</b><br>Real ${M(a.grp[t.g].r)} · Ppto ${M(a.grp[t.g].p)}<br>Efecto en la contribución <b>${Ms(d)}</b>`;
+    const base = esTot ? sy(0) : sy(t.y0), punta = esTot ? sy(t.tot) : sy(t.y1);
+    b += `<path d="${barV(x, w, base, Math.abs(punta - base) < 1 ? base - (d >= 0 ? 1 : -1) : punta)}" fill="${color}" data-tip="${esc(tipTxt)}" tabindex="0"/>`;
+    if (k < tramos.length - 1) { const yy = esTot ? sy(t.tot) : sy(t.y1); b += `<line x1="${x + w}" x2="${x + bw}" y1="${yy}" y2="${yy}" stroke="var(--axis)"/>`; }
+    const lab = esTot ? nf0.format(t.tot / 1e6) : (d >= 0 ? '+' : '−') + nf1.format(Math.abs(d) / 1e6);
+    const ly = Math.min(sy(t.y0), sy(t.y1)) - 6;
+    b += `<text x="${x + w / 2}" y="${ly}" font-size="11" fill="var(--ink2)" text-anchor="middle">${lab}</text>`;
+    b += `<text x="${x + w / 2}" y="${H - m.b + 16}" font-size="10.5" fill="var(--muted)" text-anchor="middle">${t.n}</text>`;
+  });
+  b += `<text x="${W - m.r}" y="${H - 4}" font-size="10.5" fill="var(--muted)" text-anchor="end">Millones de $ · ${S.moneda === 'const' ? 'moneda constante' : 'nominales'}</text>`;
+  el.innerHTML = svg(W, H, b, 'Puente de la contribución del presupuesto al real por grupo de rubros');
+
+  // estado de resultados con comparación contra el resto del formato
+  const fila = (n, r, p, s, rfr, cls = '') => `<tr class="${cls}"><td>${n}</td><td>${Mt(r)}</td><td>${Mt(p)}</td><td class="${(r - p) * s >= 0 ? 'up' : 'down'}">${Mts((r - p) * s)}</td><td>${P(r / a.vR)}</td><td>${P(p / a.vP)}</td><td>${rfr === null ? '—' : P(rfr)}</td></tr>`;
+  let t = `<table><thead><tr><th>Rubro<br><span style="font-weight:400">millones de $</span></th><th>Real</th><th>Ppto</th><th>Desvío</th><th>% vtas real</th><th>% vtas ppto</th><th>% vtas resto del formato</th></tr></thead><tbody>`;
+  for (const r of R) t += fila(r.rubro, a.rub[r.id].r, a.rub[r.id].p, r.signo, rf.vR ? rf.rub[r.id].r / rf.vR : null);
+  t += fila('Contribución', a.cR, a.cP, 1, rf.vR ? rf.cR / rf.vR : null, 'tot') + '</tbody></table>';
+  document.getElementById('er').innerHTML = t;
+  return true;
+}
+
+// ------------------------------------------------------------------ nivel 3
+function ratioSerie(locs, fn) {
+  return CAL.map((_, i) => { let num = 0, den = 0, ok = false; for (const l of locs) { const x = RES[l][i], o = OP[l][i]; if (!x || !o) continue; ok = true; const [n, d] = fn(x, o, i); num += n; den += d; } return ok && den ? num / den : null; });
+}
+function nivel3(abierto) {
+  const l = S.local, rs = resto(l), cont = document.getElementById('sm');
+  if (!abierto) { cont.innerHTML = ''; document.getElementById('nm').innerHTML = ''; document.getElementById('ic').innerHTML = ''; return; }
+  const k = i => CAL[LAST].ipc / CAL[i].ipc;
+  const defs = [
+    { t: 'Costo de mercadería (% de ventas)', f: (x) => [x[2][0], x[1][0]], fmt: v => nf1.format(v * 100) + '%' },
+    { t: 'Personal (% de ventas)', f: (x) => [x[3][0], x[1][0]], fmt: v => nf1.format(v * 100) + '%' },
+    { t: `Ventas por hora trabajada ($ de ${et(LAST)})`, f: (x, o, i) => [x[1][0] * k(i), o.hs], fmt: v => '$ ' + nf0.format(v) },
+  ];
+  cont.innerHTML = defs.map((d, j) => `<div class="card"><h3>${d.t}</h3><div id="sm${j}" class="chart"></div></div>`).join('');
+  defs.forEach((d, j) => {
+    const a = ratioSerie([l], d.f), b = ratioSerie(rs, d.f);
+    lineas(document.getElementById('sm' + j), CAL.map((_, i) => ({ i, a: a[i], b: b[i] })), { fmt: d.fmt, nA: L[l].id, nB: 'Resto del formato', alto: 180, label: d.t });
+  });
+
+  // nómina por puesto: período elegido contra los mismos meses un año antes
+  const ms = meses(), ant = ms.map(i => i - 12).filter(i => i >= 0), hayAnt = ant.length === ms.length;
+  const agg = (idx) => { const o = {}; for (const [p, ll, pu, dot, hn, he, costo] of DATA.nom) if (ll === l && idx.includes(p)) { const q = (o[pu] ||= { dot: 0, hn: 0, he: 0, c: 0, n: 0 }); q.dot += dot; q.hn += hn; q.he += he; q.c += costo * fR(p); q.n++; } return o; };
+  const ahora = agg(ms), antes = hayAnt ? agg(ant) : {};
+  let t = `<table><thead><tr><th>Puesto</th><th>Dotación prom.</th><th>Horas extra / normales</th><th>${hayAnt ? 'Un año antes' : ''}</th><th>Costo del período</th></tr></thead><tbody>`;
+  DATA.puestos.forEach((pu, j) => { const x = ahora[j]; if (!x) return; const y = antes[j];
+    t += `<tr><td>${pu}</td><td>${nf1.format(x.dot / x.n)}</td><td>${P(x.he / x.hn)}</td><td>${y ? P(y.he / y.hn) : '—'}</td><td>${M(x.c)}</td></tr>`; });
+  const bajas = ms.reduce((s, i) => s + (OP[l][i]?.bajas || 0), 0), bajasAnt = hayAnt ? ant.reduce((s, i) => s + (OP[l][i]?.bajas || 0), 0) : null;
+  t += `</tbody></table><div class="nota">Bajas de personal en el período: <b>${bajas}</b>${bajasAnt !== null ? ` (un año antes: ${bajasAnt})` : ''}. Las horas extra y la rotación suelen moverse antes que el costo.</div>`;
+  document.getElementById('nm').innerHTML = t;
+
+  // incidentes del local en el período; marca los que afectaron a toda la red
+  const pers = new Set(ms.map(i => CAL[i].p)), cuenta = {};
+  for (const [f, , tipo] of DATA.inc) cuenta[f + tipo] = (cuenta[f + tipo] || 0) + 1;
+  const inc = DATA.inc.filter(([f, ll]) => ll === l && pers.has(f.slice(0, 7))).sort((x, y) => y[0].localeCompare(x[0]));
+  document.getElementById('ic').innerHTML = inc.length ? `<table><thead><tr><th class="txt">Fecha</th><th class="txt">Tipo</th><th>Horas</th><th class="txt">Detalle</th></tr></thead><tbody>${inc.map(([f, , tipo, h, det]) => `<tr><td class="txt">${f.split('-').reverse().join('/')}</td><td class="txt">${esc(tipo)}${cuenta[f + tipo] >= L.length - 1 ? ' <span class="chip">toda la red</span>' : ''}</td><td>${h || '—'}</td><td class="txt">${esc(det)}</td></tr>`).join('')}</tbody></table>` : '<div class="nota">Sin incidentes registrados en el período.</div>';
+}
+
+
+// ------------------------------------------------------------------ marcas ficticias
+const MARCAS = [
+  { id: 'fogon', nombre: 'Fogón Express', c1: '#9a3412', c2: '#ea580c',
+    svg: '<svg viewBox="0 0 32 32" fill="#fff"><path d="M16 3c1 5 6 7 6 13a6 6 0 0 1-12 0c0-3 2-5 3-7 0 3 1 4 3 5 1-4-1-7 0-11z"/></svg>' },
+  { id: 'verde', nombre: 'Verde Bocado', c1: '#166534', c2: '#16a34a',
+    svg: '<svg viewBox="0 0 32 32" fill="#fff"><path d="M26 5C12 5 6 12 6 21c0 2 1 4 2 5 2-6 7-11 13-13-5 3-9 8-10 14 9 1 16-6 15-22z"/></svg>' },
+  { id: 'azul', nombre: 'Punto Azul Café', c1: '#1e3a8a', c2: '#2563eb',
+    svg: '<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="3"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="4" fill="#fff"/></svg>' },
+  { id: 'ola', nombre: 'Ola Urbana', c1: '#5b21b6', c2: '#7c3aed',
+    svg: '<svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M4 12c4-4 8 4 12 0s8 4 12 0M4 20c4-4 8 4 12 0s8 4 12 0"/></svg>' },
+];
+function aplicarMarca(id) {
+  const m = MARCAS.find(x => x.id === id) || MARCAS[0], r = document.documentElement;
+  r.style.setProperty('--brand', m.c1); r.style.setProperty('--brand2', m.c2);
+  document.getElementById('marca-nombre').textContent = m.nombre + ' (ficticia)';
+  const lg = document.getElementById('logo'); lg.innerHTML = m.svg; lg.style.animation = 'none'; void lg.offsetWidth; lg.style.animation = '';
+  try { localStorage.setItem('marca', m.id); } catch (e) {}
+}
+const selM = document.getElementById('f-marca');
+selM.innerHTML = MARCAS.map(m => `<option value="${m.id}">${m.nombre}</option>`).join('');
+let marcaIni = 'fogon'; try { marcaIni = localStorage.getItem('marca') || 'fogon'; } catch (e) {}
+selM.value = marcaIni; aplicarMarca(marcaIni);
+selM.addEventListener('change', () => aplicarMarca(selM.value));
+
+// ------------------------------------------------------------------ armado y eventos
+function render() {
+  nivel1();
+  document.getElementById('f-local').value = S.local;
+  nivel3(nivel2());
+  if (window.__DEMO) window.__DEMO.render(S.local, meses());
+}
+const selP = document.getElementById('f-periodo');
+selP.innerHTML = PRESETS.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+selP.addEventListener('change', () => { S.periodo = selP.value; render(); });
+const selL = document.getElementById('f-local');
+selL.innerHTML = L.map((l, i) => RES[i].some(x => x) ? `<option value="${i}">${l.id} ${l.nombre}</option>` : '').join('');
+selL.addEventListener('change', () => { S.local = +selL.value; render(); });
+document.querySelectorAll('[data-moneda]').forEach(btn => btn.addEventListener('click', () => {
+  S.moneda = btn.dataset.moneda;
+  document.querySelectorAll('[data-moneda]').forEach(x => x.setAttribute('aria-pressed', x === btn));
+  render();
+}));
+const elegir = e => { const g = e.target.closest('.fila'); if (!g) return; S.local = +g.dataset.local; render(); document.getElementById('n2').scrollIntoView({ behavior: 'smooth' }); };
+document.getElementById('rk').addEventListener('click', elegir);
+document.getElementById('rk').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); elegir(e); } });
+document.querySelectorAll('[data-tabla]').forEach(btn => btn.addEventListener('click', () => {
+  const id = btn.dataset.tabla, t = document.getElementById(id + '-t'), c = document.getElementById(id);
+  const ver = t.classList.toggle('oculto') === false; c.classList.toggle('oculto', ver); btn.textContent = ver ? 'Ver gráfico' : 'Ver tabla';
+}));
+document.getElementById('tema').addEventListener('click', () => {
+  const r = document.documentElement, oscuro = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme = oscuro ? 'light' : 'dark';
+});
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+render();
+</script>
+
+<style>
+#login { position: fixed; inset: 0; z-index: 30; background: var(--page); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 32px 16px; }
+#login .caja { max-width: 560px; width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+#login h1 { font-size: 21px; } #login p { color: var(--ink2); font-size: 14px; margin: 6px 0 14px; }
+#login .usuarios { display: grid; gap: 8px; margin: 12px 0 16px; }
+#login .usuarios button { text-align: left; padding: 10px 12px; }
+#login .usuarios b { display: block; font-size: 14px; } #login .usuarios span { font-size: 12.5px; color: var(--ink2); }
+#login form { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 14px; }
+#login input { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--page); color: var(--ink); }
+#login .msg { min-height: 20px; font-size: 13px; color: var(--bad); }
+#sesion { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 13.5px; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+#solo-incidentes { display: none; }
+</style>
+<div id="login" role="dialog" aria-labelledby="t-login">
+  <div class="caja">
+    <h1 id="t-login">Demo con login · Cadena Demo S.A.</h1>
+    <p>Cada usuario de prueba ve solo lo que le corresponde según su rol. La página no tiene los datos adentro: los pide a la base, y la base filtra por usuario. Empresa y datos <b>ficticios</b>, de solo lectura.</p>
+    <div class="usuarios" id="botones"></div>
+    <form id="form">
+      <label>Email <input id="email" type="email" autocomplete="username" required></label>
+      <label>Contraseña <input id="pw" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Entrar</button>
+      <div class="msg" id="msg" role="status"></div>
+    </form>
+    <p style="font-size:12.5px">Contraseña de todos los usuarios de prueba: <code>Caso05-Demo</code></p>
+  </div>
+</div>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm";
+const sb = createClient("https://wlbwelatewecujnvjzpa.supabase.co", "sb_publishable_W9iqyayREslltIOKLw_IrQ_8ROe7cJq");
+const USUARIOS = [
+  ["direccion@cadena-demo.test", "Dirección", "Ve los 12 locales"],
+  ["regional.norte@cadena-demo.test", "Gerente regional Norte", "Ve solo los locales de su región"],
+  ["regional.centro@cadena-demo.test", "Gerente regional Centro", "Ve solo los locales de su región"],
+  ["local.l07@cadena-demo.test", "Gerente de local L07", "Ve solo su local"],
+  ["local.l10@cadena-demo.test", "Gerente de local L10", "Ve solo su local"],
+  ["supervisor.l03@cadena-demo.test", "Supervisor L03", "Ve solo los incidentes de su local, sin números económicos"],
+];
+const $ = id => document.getElementById(id);
+$("botones").innerHTML = USUARIOS.map(([e, r, d]) => `<button type="button" data-email="${e}"><b>${r}</b><span>${d} · ${e}</span></button>`).join("");
+$("botones").addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; $("email").value = b.dataset.email; $("pw").value = "Caso05-Demo"; entrar(); });
+$("form").addEventListener("submit", ev => { ev.preventDefault(); entrar(); });
+
+async function todo(tabla, cols, orden) {           // la API devuelve hasta 1000 filas por pedido: pido por tandas
+  let filas = [], desde = 0;
+  for (;;) {
+    const { data, error } = await sb.from(tabla).select(cols).order(orden).range(desde, desde + 999);
+    if (error) throw error;
+    filas = filas.concat(data); if (data.length < 1000) return filas; desde += 1000;
+  }
+}
+async function entrar() {
+  $("msg").textContent = "Entrando…";
+  const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("pw").value });
+  if (error) { $("msg").textContent = "No se pudo entrar: " + error.message; return; }
+  try { await cargar(); } catch (e) { $("msg").textContent = "Error al traer los datos: " + (e.message || e); }
+}
+async function cargar() {
+  const [perfil] = await todo("perfiles", "email,rol,region,local_id", "email");
+  const [loc, rub, cal, res, op, nom, inc] = await Promise.all([
+    todo("dim_local", "*", "local_id"), todo("dim_rubro", "*", "rubro_id"), todo("dim_calendario", "*", "periodo"),
+    todo("fact_resultados", "periodo,local_id,rubro_id,real,presupuesto", "periodo"),
+    todo("fact_operativo", "*", "periodo"), todo("fact_nomina", "*", "periodo"), todo("fact_incidentes", "*", "fecha")]);
+  const pi = Object.fromEntries(cal.map((c, i) => [c.periodo, i])), li = Object.fromEntries(loc.map((l, i) => [l.local_id, i]));
+  const PUESTOS = ["Encargado", "Atención", "Cocina", "Limpieza"];
+  window.__DATOS = {
+    locales: loc.map(l => [l.local_id, l.local, l.region, l.formato, l.m2, l.apertura]),
+    rubros: rub.map(r => [r.rubro_id, r.rubro, r.signo, r.grupo_puente]),
+    cal: cal.map(c => [c.periodo, Number(c.ipc_indice), Number(c.ipc_ppto_indice)]),
+    res: res.map(r => [pi[r.periodo], li[r.local_id], r.rubro_id, Number(r.real), Number(r.presupuesto)]),
+    op: op.map(o => [pi[o.periodo], li[o.local_id], o.tickets, o.ticket_promedio, o.dotacion, o.horas_trabajadas, o.bajas_personal, o.tickets_ppto, o.ticket_promedio_ppto]),
+    puestos: PUESTOS,
+    nom: nom.map(n => [pi[n.periodo], li[n.local_id], PUESTOS.indexOf(n.puesto), n.dotacion, n.horas_normales, n.horas_extra, Number(n.costo_total)]),
+    inc: inc.map(x => [x.fecha, li[x.local_id], x.tipo, x.horas_afectadas, x.detalle]),
+  };
+  const pf = await sb.rpc("promedio_formato");
+  if (pf.error) throw pf.error;
+  window.__DATOS.pf = {};
+  for (const r of pf.data) if (r.rubro_id === 1) (window.__DATOS.pf[r.formato] ||= [])[pi[r.periodo]] = Number(r.monto_real);
+  let coms = [], fbs = [];
+  async function recargar() {
+    const [c, f] = await Promise.all([
+      sb.from("comentarios_desvio").select("*").order("creado"),
+      sb.from("feedback_primera_linea").select("*").order("fecha")]);
+    if (c.error) throw c.error; if (f.error) throw f.error;
+    coms = c.data; fbs = f.data;
+  }
+  await recargar();
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+  const fechaAR = f => f.split("-").reverse().join("/");
+  const GRUPOS = ["Ventas", "Costo de mercadería", "Personal", "Gastos de ocupación", "Gastos operativos", "Impuestos", "Financiero"];
+  const CATS = ["Precio", "Calidad del producto", "Atención o servicio", "Falta de stock o entrega", "Situación económica del cliente", "Competencia", "Clima o estacionalidad", "Otro"];
+  const propio = id => perfil.local_id === id;
+  function htmlFeedback(localId, periodos) {
+    const sel = fbs.filter(x => x.local_id === localId && (!periodos || periodos.has(x.fecha.slice(0, 7))));
+    const cuenta = {}; sel.forEach(x => cuenta[x.categoria] = (cuenta[x.categoria] || 0) + 1);
+    const max = Math.max(1, ...Object.values(cuenta));
+    let h = `<div class="card-h"><h3>Lo que dice la primera línea · ${sel.length} reporte${sel.length === 1 ? "" : "s"} en el período</h3></div>`;
+    h += sel.length
+      ? Object.entries(cuenta).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div style="display:flex;gap:8px;align-items:center;margin:5px 0"><span style="width:220px;font-size:13px">${esc(k)}</span><span style="height:12px;border-radius:0 4px 4px 0;background:var(--s1);width:${Math.round(v / max * 200)}px"></span><span style="font-size:12.5px;color:var(--ink2)">${v}</span></div>`).join("")
+        + `<div class="nota">Últimos: ${sel.slice(-3).reverse().map(x => `${fechaAR(x.fecha)} · ${esc(x.categoria)}${x.detalle ? ": " + esc(x.detalle) : ""}`).join(" | ")}</div>`
+      : `<div class="nota">Sin reportes en el período.</div>`;
+    if (propio(localId) && ["Supervisor", "Gerente de local"].includes(perfil.rol)) h += `<form class="fform" data-tipo="fb" style="display:grid;gap:6px;margin-top:12px;max-width:520px">
+      <b style="font-size:13px">Cargar un reporte (1 minuto)</b>
+      <select name="categoria" aria-label="Categoría">${CATS.map(c => `<option>${c}</option>`).join("")}</select>
+      <input name="detalle" maxlength="300" placeholder="Detalle breve (opcional)" aria-label="Detalle">
+      <button type="submit">Guardar reporte</button><span class="nota" data-msg role="status"></span></form>`;
+    return h;
+  }
+  function htmlComentarios(localId) {
+    const sel = coms.filter(x => x.local_id === localId).slice().reverse();
+    let h = `<div class="card-h"><h3>¿Qué pasó? Explicación del responsable del local</h3></div>`;
+    h += sel.length
+      ? `<div class="scroll"><table><thead><tr><th class="txt">Mes</th><th class="txt">Rubro</th><th class="txt">Causa</th><th class="txt">¿Controlable?</th><th class="txt">Acción y plazo</th></tr></thead><tbody>${sel.map(x => `<tr><td class="txt">${x.periodo}</td><td class="txt">${esc(x.grupo)}</td><td class="txt">${esc(x.causa)}</td><td class="txt">${x.controlable ? "Sí (gestión)" : "No (externo)"}</td><td class="txt">${esc(x.accion)}${x.fecha_compromiso ? " · hasta " + fechaAR(x.fecha_compromiso) : ""}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="nota">Todavía no hay explicaciones para este local.</div>`;
+    if (propio(localId) && perfil.rol === "Gerente de local") h += `<form class="fform" data-tipo="cm" style="display:grid;gap:6px;margin-top:12px;max-width:620px">
+      <b style="font-size:13px">Explicar un desvío de tu local (queda firmado con tu usuario)</b>
+      <select name="grupo" aria-label="Rubro">${GRUPOS.map(g => `<option>${g}</option>`).join("")}</select>
+      <textarea name="causa" required minlength="5" maxlength="400" rows="2" placeholder="Causa: qué pasó" aria-label="Causa"></textarea>
+      <select name="controlable" aria-label="¿Controlable?"><option value="true">Controlable (gestión)</option><option value="false">No controlable (externo)</option></select>
+      <input name="accion" required minlength="3" maxlength="300" placeholder="Acción: qué se hace" aria-label="Acción">
+      <label style="font-size:13px">Fecha de compromiso <input name="fecha" type="date"></label>
+      <button type="submit">Guardar explicación</button><span class="nota" data-msg role="status"></span></form>`;
+    else h += `<div class="nota">Solo el gerente de este local puede escribir acá; vos lo leés. La base lo controla, no la página.</div>`;
+    return h;
+  }
+  document.addEventListener("submit", async ev => {
+    const f = ev.target.closest(".fform"); if (!f) return;
+    ev.preventDefault();
+    const d = Object.fromEntries(new FormData(f)), msg = f.querySelector("[data-msg]");
+    msg.textContent = "Guardando…";
+    const r = f.dataset.tipo === "cm"
+      ? await sb.from("comentarios_desvio").insert({ local_id: perfil.local_id, periodo: window.__ULT_PERIODO, grupo: d.grupo, causa: d.causa, controlable: d.controlable === "true", accion: d.accion, fecha_compromiso: d.fecha || null })
+      : await sb.from("feedback_primera_linea").insert({ local_id: perfil.local_id, categoria: d.categoria, detalle: d.detalle || null });
+    if (r.error) { msg.textContent = "No se pudo guardar: " + r.error.message; return; }
+    await recargar(); window.__DEMO.refrescar();
+  });
+  window.__DEMO = {
+    _ult: null,
+    resumen(id) { const c = coms.filter(x => x.local_id === id).at(-1); return c ? `<br>Explicación (${c.periodo}): ${esc(c.causa.slice(0, 90))}${c.causa.length > 90 ? "…" : ""}` : ""; },
+    render(l, ms) {
+      const id = window.__DATOS.locales[l][0], per = new Set(ms.map(i => window.__DATOS.cal[i][0]));
+      window.__ULT_PERIODO = window.__DATOS.cal[ms[ms.length - 1]][0];
+      $("cm").innerHTML = htmlComentarios(id); $("fb").innerHTML = htmlFeedback(id, per);
+      $("cm").classList.remove("oculto"); $("fb").classList.remove("oculto");
+      this._ult = [l, ms];
+    },
+    refrescar() {
+      if (perfil.rol === "Supervisor") $("fb-sup").innerHTML = htmlFeedback(perfil.local_id, null);
+      else if (this._ult) this.render(...this._ult);
+    },
+  };
+  const visibles = new Set(res.map(r => r.local_id));
+  const alcance = perfil.rol === "Dirección" ? "la contribución de la red"
+    : perfil.rol === "Gerente regional" ? `la contribución de tu región (${perfil.region})`
+    : `la contribución de tu local (${perfil.local_id})`;
+  window.__ALCANCE = alcance;
+  $("sesion").innerHTML = `<span><b>${perfil.rol}</b>${perfil.region ? " · " + perfil.region : ""}${perfil.local_id ? " · " + perfil.local_id : ""} — la base te mandó <b>${res.length.toLocaleString("es-AR")}</b> filas de resultados de <b>${visibles.size}</b> local${visibles.size === 1 ? "" : "es"} y <b>${inc.length}</b> incidentes (de 2.484 y 110 en total).</span><button type="button" id="salir">Cerrar sesión</button>`;
+  $("sesion").style.display = "flex";
+  $("salir").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  $("login").style.display = "none";
+  if (!res.length) {   // supervisor: no ve números económicos, solo sus incidentes
+    document.querySelectorAll("#n1, #n2, #n3, .filtros").forEach(n => n.style.display = "none");
+    const s = $("solo-incidentes"); s.style.display = "block";
+    s.querySelector("tbody").innerHTML = inc.sort((a, b) => b.fecha.localeCompare(a.fecha)).map(x =>
+      `<tr><td class="txt">${x.fecha.split("-").reverse().join("/")}</td><td class="txt">${x.local_id}</td><td class="txt">${x.tipo}</td><td>${x.horas_afectadas || "—"}</td><td class="txt">${x.detalle}</td></tr>`).join("");
+    $("fb-sup").innerHTML = htmlFeedback(perfil.local_id, null);
+    return;
+  }
+  const app = document.createElement("script"); app.textContent = $("app").textContent; document.body.appendChild(app);
+}
+</script>
+</body>
+</html>
