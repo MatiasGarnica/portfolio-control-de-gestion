@@ -32,7 +32,7 @@ Cierre 2026 y base para el presupuesto 2027 de una cadena de 12 locales de comid
 - **Las bandas usan la mediana de los locales y un desvío robusto**, para que un local que se cae no haga parecer buenos a los demás ni ensanche la banda.
 - **El elegido empata con un método simple a nivel red.** Se dice; gana por local y sirve para el local nuevo.
 
-Detalle, definiciones y **12 preguntas que te pueden hacer en una entrevista con su respuesta**: [`07_docs/metodo_y_criterios.md`](07_docs/metodo_y_criterios.md).
+Detalle, definiciones y **12 preguntas frecuentes sobre el método, con su respuesta**: [`07_docs/metodo_y_criterios.md`](07_docs/metodo_y_criterios.md).
 
 ## Limitaciones
 

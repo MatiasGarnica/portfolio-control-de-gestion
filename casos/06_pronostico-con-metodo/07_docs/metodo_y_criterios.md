@@ -146,7 +146,7 @@ Las tres situaciones plantadas aparecen. Las dos sobrantes son un mes aislado ha
 - **Presupuesto nov-dic 2026** estimado (ver punto 4).
 - Datos ficticios: el método es el punto, no los números.
 
-## 8. Preguntas que te pueden hacer y cómo responderlas
+## 8. Preguntas frecuentes sobre el método
 
 **1. ¿Cómo sabés si un desvío es ruido o señal?**
 Comparo cada local con su propio año anterior y con lo que le pasó al resto de los locales ese mes. Mido cuánto se mueve eso normalmente (el desvío típico) y pido explicación cuando un mes sale de ±3 desvíos o cuando varios meses seguidos se van para el mismo lado. Con eso, de 11 locales 5 tienen señal, y las 3 con causa conocida aparecen.
