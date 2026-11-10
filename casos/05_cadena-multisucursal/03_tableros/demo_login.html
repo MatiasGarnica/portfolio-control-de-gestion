@@ -143,7 +143,7 @@ header.marca h1 { color: #fff; }
     <div class="grid2">
       <div class="card">
         <div class="card-h"><h3>Desvío de contribución contra presupuesto, por local</h3><button class="lnk" data-tabla="rk">Ver tabla</button></div>
-        <div class="leyenda"><span><i class="sq" style="background:var(--pos)"></i>A favor</span><span><i class="sq" style="background:var(--neg)"></i>En contra</span><span><i class="sq" style="background:var(--total)"></i>Menos de ±5 % (no material)</span><span>Hacé clic en un local para abrirlo abajo</span></div>
+        <div class="leyenda"><span><i class="sq" style="background:var(--pos)"></i>A favor</span><span><i class="sq" style="background:var(--neg)"></i>En contra</span><span><i class="sq" style="background:var(--total)"></i>Desvío menor al 5 % de su presupuesto (no material)</span><span>Hacé clic en un local para abrirlo abajo</span></div>
         <div id="rk" class="chart"></div>
         <div id="rk-t" class="scroll oculto"></div>
       </div>
@@ -340,7 +340,7 @@ function nivel1() {
     b += `<rect x="0" y="${y - 3}" width="${W}" height="${rowH - 2}" rx="6" fill="${sel ? 'var(--sel)' : 'transparent'}"/>`;
     b += `<text x="6" y="${y + 15}" font-size="12.5" fill="var(--ink)" font-weight="${sel ? 650 : 400}">${lo.id} ${esc(W < 440 && lo.nombre.length > 13 ? lo.nombre.slice(0, 12) + '…' : lo.nombre)}</text>`;
     b += `<path d="${barH(x0, sx(d), y + 3, 16)}" fill="${!material(x) ? 'var(--total)' : (d >= 0 ? 'var(--pos)' : 'var(--neg)')}"/>`;
-    b += `<text x="${d >= 0 ? sx(d) + 6 : sx(d) - 6}" y="${y + 15}" font-size="12" fill="var(--ink2)" text-anchor="${d >= 0 ? 'start' : 'end'}">${Ms(d).replace('$ ', '')}</text></g>`;
+    b += `<text x="${d >= 0 ? sx(d) + 6 : sx(d) - 6}" y="${y + 15}" font-size="12" fill="var(--ink2)" text-anchor="${d >= 0 ? 'start' : 'end'}">${Ms(d).replace('$ ', '')}${W >= 560 ? ' · ' + P(d / Math.abs(x.cP)).replace(' %', '%') : ''}</text></g>`;
   });
   b += `<text x="${x0}" y="${H - 4}" font-size="11" fill="var(--muted)" text-anchor="middle">0 = en línea con el presupuesto</text>`;
   el.innerHTML = svg(W, H, b, 'Ranking de locales por desvío de contribución contra presupuesto');
@@ -524,7 +524,30 @@ function render() {
   nivel1();
   document.getElementById('f-local').value = S.local;
   nivel3(nivel2());
-  if (window.__DEMO) window.__DEMO.render(S.local, meses());
+  if (window.__DEMO) window.__DEMO.render(S.local, meses()); else explicaciones(S.local);
+}
+
+// ------------------------------------------------------------------ explicaciones del responsable (versión estática)
+const CM = DATA.cm || [];
+const fechaAR = f => f.split('-').reverse().join('/');
+function seguimiento(c, li) {
+  const lim = c.fecha_compromiso.slice(0, 7), ms = CAL.map((x, i) => x.p > lim ? i : -1).filter(i => i >= 0);
+  if (!ms.length) return `<span class="nota" style="margin:0">En plazo</span>`;
+  const g = sumar([li], ms, 'nom').grp[c.grupo], d = g.r - g.p, rel = d / Math.abs(g.p || 1);
+  const rango = ms.length === 1 ? et(ms[0]) : `${et(ms[0])} a ${et(ms[ms.length - 1])}`;
+  return d < 0 && Math.abs(rel) >= UMBRAL
+    ? delta(-1, `Vencido: el desvío sigue (${P(rel)} contra presupuesto, ${rango})`)
+    : delta(1, `Cumplido: dentro del umbral en ${rango} (${P(rel)})`);
+}
+function explicaciones(li) {
+  const el = document.getElementById('cm'), lo = L[li], sel = CM.filter(c => c.local_id === lo.id);
+  const x = sumar([li], meses()), falta = x.cR < x.cP && material(x) && !sel.length;
+  let h = `<div class="card-h"><h3>¿Qué pasó? Explicación del responsable y seguimiento</h3></div>`;
+  h += sel.length
+    ? `<div class="scroll"><table><thead><tr><th class="txt">Mes</th><th class="txt">Rubro</th><th class="txt">Causa</th><th class="txt">¿Controlable?</th><th class="txt">Acción y plazo</th><th class="txt">Seguimiento</th></tr></thead><tbody>${sel.map(c => `<tr><td class="txt">${(i => i >= 0 ? et(i) : c.periodo)(CAL.findIndex(x => x.p === c.periodo))}</td><td class="txt">${esc(c.grupo)}</td><td class="txt">${esc(c.causa)}</td><td class="txt">${c.controlable ? 'Sí (gestión)' : 'No (externo)'}</td><td class="txt">${esc(c.accion)} · hasta ${fechaAR(c.fecha_compromiso)}</td><td class="txt">${seguimiento(c, li)}</td></tr>`).join('')}</tbody></table></div>`
+    : `<div class="nota">${falta ? '<b>Pendiente:</b> el desvío de este local supera el umbral y todavía no tiene explicación.' : 'Este local no necesita explicación: su desvío está dentro del umbral o a favor.'}</div>`;
+  h += `<div class="nota">El seguimiento compara el rubro después de la fecha comprometida contra el presupuesto, con el mismo umbral del 5 %. En la <a href="demo_login.html">demo con login</a> cada gerente carga la explicación de su local y queda firmada con su usuario.</div>`;
+  el.innerHTML = h; el.classList.remove('oculto');
 }
 const selP = document.getElementById('f-periodo');
 selP.innerHTML = PRESETS.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');

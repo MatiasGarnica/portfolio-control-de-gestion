@@ -200,6 +200,12 @@ def incidentes(operativo):
     tipos = [("Corte de luz", 2, 6, 0.010), ("Falla de equipo de cocina", 4, 24, 0.006),
              ("Faltante de insumo", 3, 12, 0.004), ("Ausentismo (falta de personal)", 3, 8, 0.005),
              ("Reclamo de cliente grave", 0, 0, 0.0), ("Corte de agua", 2, 8, 0.008)]
+    DETALLE = {"Corte de luz": "Corte de la distribuidora; se cerró la cocina hasta que volvió",
+               "Falla de equipo de cocina": "Equipo fuera de servicio; menú reducido hasta la reparación",
+               "Faltante de insumo": "No llegó un insumo del proveedor; platos sin stock",
+               "Ausentismo (falta de personal)": "Faltó personal del turno; demoras en la atención",
+               "Reclamo de cliente grave": "Reclamo por demora o error en el pedido; se respondió y se compensó",
+               "Corte de agua": "Corte del servicio; atención limitada"}
     filas = []
     for _, r in operativo.iterrows():
         for _ in range(rng.poisson(0.35)):
@@ -208,7 +214,7 @@ def incidentes(operativo):
             horas = int(rng.integers(hmin, hmax + 1)) if hmax else 0
             venta_dia = r.tickets * r.ticket_promedio / 30
             filas.append((f"{r.periodo}-{dia:02d}", r.local_id, tipo, horas, round(venta_dia * impacto * max(horas, 1) / 4),
-                          "Incidente operativo menor"))
+                          DETALLE[tipo]))
     filas += [
         ("2026-03-12", lid, "Falla del sistema de cobro (POS)", 14, None, "Caída del proveedor de cobros en toda la red")
         for lid in LOCALES.local_id]

@@ -32,6 +32,21 @@ data = {
     "nom": [[pi[r.periodo], li[r.local_id], puestos.index(r.puesto), int(r.dotacion), int(r.horas_normales),
              int(r.horas_extra), int(r.costo_total)] for r in nom.itertuples()],
     "inc": [[r.fecha, li[r.local_id], r.tipo, int(r.horas_afectadas), r.detalle] for r in inc.itertuples()],
+    # Explicaciones de ejemplo de los responsables (las mismas que tiene la demo con login, más L03).
+    "cm": [
+        {"local_id": "L03", "periodo": "2026-03", "grupo": "Ventas", "controlable": False,
+         "causa": "Obra vial en el acceso desde marzo: entrada reducida y 25 % menos de tickets.",
+         "accion": "Cartelería en el desvío y promo de delivery; se pide a Dirección revisar el presupuesto de abril a agosto.",
+         "fecha_compromiso": "2026-08-31"},
+        {"local_id": "L07", "periodo": "2026-03", "grupo": "Personal", "controlable": True,
+         "causa": "Renunció el encargado en enero y se fueron 3 personas más; cubrimos con horas extra (12 % de las horas) y bajó la productividad.",
+         "accion": "Encargado nuevo desde abril; 2 altas en curso; meta: horas extra debajo del 5 % en mayo.",
+         "fecha_compromiso": "2026-05-31"},
+        {"local_id": "L10", "periodo": "2026-06", "grupo": "Costo de mercadería", "controlable": False,
+         "causa": "Rotura de la cámara de frío el 17/06: se perdió mercadería y hubo reparación urgente.",
+         "accion": "Reclamo al seguro; contrato de mantenimiento preventivo trimestral.",
+         "fecha_compromiso": "2026-07-31"},
+    ],
 }
 
 plantilla = (Path(__file__).parent / "tablero_plantilla.html").read_text(encoding="utf-8")

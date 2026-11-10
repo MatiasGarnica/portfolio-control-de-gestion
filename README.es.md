@@ -68,6 +68,12 @@ python casos/05_cadena-multisucursal/02_codigo/validar_datos.py      # controles
 python data/generate_synthetic_data.py                               # dataset de la distribuidora
 ```
 
+## Cómo está hecho
+
+- **Lo mío:** la pregunta de negocio, el modelo de datos, los indicadores y sus criterios (umbral, moneda constante, comparación contra pares), el diseño de cada tablero y la validación de cada número.
+- **Con asistencia de IA:** el código de apoyo (Python, JavaScript, Apps Script) se escribió con IA a partir de esas reglas. Cada caso trae un script de controles (`validar_datos.py`) que verifica que los números cierren.
+- **Datos:** todos ficticios, con situaciones plantadas para que el análisis tenga algo que encontrar. Ninguna cifra viene de una empresa real.
+
 ## Contacto
 
 **Matías Garnica** · [LinkedIn](https://www.linkedin.com/in/garnicamatias) · garnicamatias@outlook.es

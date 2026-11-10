@@ -23,7 +23,7 @@ Navegador (HTML estático)  ──login──▶  Supabase Auth  (usuario + cont
 | local.l07@cadena-demo.test | Gerente de local | 216 | 1 (L07) | 11 |
 | supervisor.l03@cadena-demo.test | Supervisor | **0** (no ve números económicos) | — | 9 (solo L03) |
 
-Contraseña de todos: `Caso05-Demo`. Datos ficticios, de **solo lectura**: no hay ninguna regla que permita escribir.
+Contraseña de todos: `Caso05-Demo`. Datos ficticios. Los números son de **solo lectura**. Hay solo dos escrituras permitidas: el gerente de local carga explicaciones de desvío de **su** local, y el supervisor o el gerente cargan reportes de primera línea de su local. Ninguna regla permite modificar ni borrar.
 
 ## Cómo está hecho (resumen del SQL en `02_codigo/supabase_esquema.sql`)
 

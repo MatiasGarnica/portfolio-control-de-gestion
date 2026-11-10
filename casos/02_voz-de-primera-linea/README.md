@@ -6,6 +6,10 @@ Cómo saber *por qué* cambian las ventas, con un formulario de 1 minuto y una p
 > Todos los datos son **ficticios**, generados con semilla fija. No hay nombres de empresas, clientes ni personas reales.
 > Contexto del caso: distribuidora de agua en bidones, 8 rutas de reparto.
 
+![Tablero: voz de primera línea contra ventas](03_tableros/captura_tablero.png)
+
+▶ [Abrir el tablero](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/02_voz-de-primera-linea/03_tableros/voz_primera_linea.html)
+
 ## El problema
 
 Los sistemas dicen **qué** pasó: las ventas de la ruta 5 cayeron 18 %. No dicen **por qué**.
@@ -31,10 +35,10 @@ Convierte lo que ve la primera línea en **un dato que se puede contar**.
 
 | Carpeta | Qué hay |
 |---|---|
-| `01_datos\` | `respuestas.csv` (reportes, mismo formato que exporta Forms) y `ventas_semanales.csv` |
-| `02_codigo\` | `apps_script_resumen.gs` (va en la planilla), `generar_datos.py`, `analizar.py`, `armar_tablero.py` |
-| `03_tableros\` | `voz_primera_linea.html`: tablero autocontenido, se ve bien en el celular |
-| `04_informes\` | `hallazgos.md`: separa efecto mercado de efecto local |
+| `01_datos/` | `respuestas.csv` (reportes, mismo formato que exporta Forms) y `ventas_semanales.csv` |
+| `02_codigo/` | `apps_script_resumen.gs` (va en la planilla), `generar_datos.py`, `analizar.py`, `armar_tablero.py` |
+| `03_tableros/` | `voz_primera_linea.html`: tablero autocontenido, se ve bien en el celular |
+| `04_informes/` | `hallazgos.md`: separa efecto mercado de efecto local |
 
 ## Cómo armarlo en 30 minutos (Google Forms + Sheets)
 
@@ -97,7 +101,7 @@ Pedí que se cargue **al final del recorrido**. Tarda menos de 1 minuto.
 ### Paso 4. El resumen de los lunes (10 minutos)
 
 1. En la planilla: **Extensiones > Apps Script**.
-2. Pegá el contenido de `02_codigo\apps_script_resumen.gs` y guardá.
+2. Pegá el contenido de `02_codigo/apps_script_resumen.gs` y guardá.
 3. Revisá la sección `CONFIGURACION` (nombre de la hoja y texto de las columnas: `ruta`, `motivo`).
 4. Ejecutá `resumenSemanal` una vez y aceptá los permisos. Aparece la hoja **Resumen semanal**.
 5. Ejecutá `crearDisparadorSemanal` una vez. Desde ahí se actualiza solo cada lunes a las 7.
@@ -124,15 +128,15 @@ En este caso (datos ficticios, últimas 4 semanas contra las semanas 1 a 5):
 - **Mercado:** "Situación económica del cliente" sube en 7 de 8 rutas. Las ventas caen cerca de 4 % en todas.
 - **Local:** en la Ruta 5 - Oeste, "Competencia nueva en la zona" pasa de 1 a 7 reportes por semana desde la semana 6. La ruta cae 18,5 %: 14,5 puntos más que el mercado.
 
-Todo el detalle está en `04_informes\hallazgos.md`. El tablero está en `03_tableros\voz_primera_linea.html` (doble clic).
+Todo el detalle está en [`04_informes/hallazgos.md`](04_informes/hallazgos.md).
 
 ## Cómo reproducir los datos y el tablero
 
 ```
 cd 02_codigo
-python generar_datos.py     # 01_datos\respuestas.csv y ventas_semanales.csv
-python analizar.py          # 04_informes\hallazgos.md
-python armar_tablero.py     # 03_tableros\voz_primera_linea.html
+python generar_datos.py     # 01_datos/respuestas.csv y ventas_semanales.csv
+python analizar.py          # 04_informes/hallazgos.md
+python armar_tablero.py     # 03_tableros/voz_primera_linea.html
 ```
 
 Requiere Python 3 con `pandas` y `numpy`. Semilla fija: siempre da los mismos datos.
@@ -148,6 +152,7 @@ Requiere Python 3 con `pandas` y `numpy`. Semilla fija: siempre da los mismos da
 - **Formulario abierto:** cualquiera con el link puede cargar. Para uso interno alcanza. Si hace falta saber quién carga, se restringe a la organización (cuentas de Workspace).
 - **Datos personales:** el campo libre puede traer nombres de clientes. Se pide no ponerlos y se limita quién ve la planilla.
 - **Apps Script tiene cuotas** y depende de una cuenta personal: si esa persona se va, el disparador se va con ella.
+- **El Apps Script se revisó, pero todavía no corrió sobre una planilla real de Google.** El análisis y el tablero sí se reprodujeron con `analizar.py`.
 - **La planilla se carga a mano en el cruce.** Las ventas hay que pegarlas aparte (o con `analizar.py`); no se conectan solas.
 
 ## Qué se le pide a Sistemas en una empresa más grande
@@ -162,11 +167,3 @@ La versión de 30 minutos prueba que la idea sirve. Para sostenerla en escala, s
 6. **Cuenta de servicio** para los procesos automáticos, en lugar de una cuenta personal.
 7. **Ubicación y política de datos:** dónde se guarda, cuánto tiempo, y qué pasa con los datos personales del campo libre.
 8. **Si el volumen crece** (call center, redes, encuestas de clientes): clasificar el texto libre con IA por tema y sentimiento, sobre la misma tabla.
-
-## Estado
-
-- [x] Datos ficticios (12 semanas, 8 rutas, 2 historias plantadas)
-- [x] Apps Script de resumen semanal con aviso
-- [x] Análisis: efecto mercado contra efecto local
-- [x] Tablero HTML liviano, tema claro
-- [ ] Probar el Apps Script sobre una planilla real de Google (se verificó la sintaxis, no la ejecución)
