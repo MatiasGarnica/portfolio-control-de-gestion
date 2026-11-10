@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pronóstico con método</title>
+<meta name="description" content="Caso 06 · Pronóstico de ventas y contribución con backtest, intervalos, escenarios de inflación y bandas de control. Empresa y datos ficticios.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #eef1f5; --surface: #ffffff; --ink: #0b0b0b; --ink2: #52514e; --muted: #77756f;
+  --grid: #e7eaef; --axis: #c3c2b7; --border: #d6dbe3; --thead: #f3f5f8; --zebra: #fafbfc;
+  --brand: #9a3412; --brand2: #ea580c;
+  --real: #2a78d6; --pron: #c2410c; --pron-band: rgba(234,88,12,.16); --ppto: #898781;
+  --band: rgba(42,120,214,.10); --good: #0f7a2e; --bad: #d03b3b; --warn: #b7791f;
+  --chip-bad: #fde8e8; --chip-warn: #fdf3df; --chip-ok: #e8f5ec;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+h2 { font-size: 18px; margin: 0; font-weight: 650; }
+h3 { font-size: 14px; margin: 0 0 6px; font-weight: 650; color: var(--ink2); }
+p { margin: 6px 0; }
+.sub { color: var(--ink2); font-size: 13px; }
+button, select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; min-height: 36px; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--real); outline-offset: 2px; }
+header.marca { border-radius: 14px; padding: 16px 18px; color: #fff; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: linear-gradient(120deg, var(--brand), var(--brand2)); box-shadow: 0 4px 14px rgba(16,24,40,.12); }
+header.marca .sub { color: rgba(255,255,255,.9); }
+.marca-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.logo { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.16); }
+.logo svg { width: 30px; height: 30px; }
+.corte { font-size: 13px; background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 12px; }
+section { margin-top: 30px; }
+.nivel { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; border-left: 4px solid var(--brand2); padding-left: 10px; }
+.nivel .tag { font-size: 12px; font-weight: 650; color: var(--brand); text-transform: uppercase; letter-spacing: .04em; }
+.card, .tile, .titular { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 3px 8px rgba(16,24,40,.06); min-width: 0; }
+.titular { padding: 16px 18px; margin-top: 16px; font-size: 16px; line-height: 1.55; }
+.titular b { font-weight: 650; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
+.tile { padding: 12px 14px; border-top: 3px solid var(--brand2); }
+.tile .k { font-size: 13px; color: var(--ink2); }
+.tile .v { font-size: clamp(19px, 2.1vw, 23px); font-weight: 650; margin: 2px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tile .d { font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+.card { padding: 14px; }
+.ctrl { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+.ctrl label { font-size: 13px; color: var(--ink2); display: flex; gap: 6px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; border-radius: 0; padding: 6px 10px; }
+.seg button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); margin: 2px 0 6px; }
+.leyenda i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.leyenda i.dash { border-top-style: dashed; }
+.leyenda i.sq { width: 12px; height: 10px; border: 0; }
+svg { display: block; overflow: visible; }
+svg text { font-family: inherit; }
+.nota { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scroll table { min-width: 620px; }
+.scroll table.ancha { min-width: 760px; }
+.scroll table.chica { min-width: 470px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; font-size: 12px; background: var(--thead); white-space: normal; }
+th:first-child, td:first-child { text-align: left; }
+td.txt, th.txt { text-align: left; white-space: normal; font-variant-numeric: normal; }
+tbody tr:nth-child(even) td { background: var(--zebra); }
+tr.eleg td { background: #fff4ec !important; font-weight: 600; }
+tr.ppto td { background: #f4f4f2 !important; }
+.desc { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); white-space: normal; }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chip.eleg { background: var(--brand); color: #fff; }
+.chip.bad { background: var(--chip-bad); color: #9b1c1c; }
+.chip.warn { background: var(--chip-warn); color: #7a4a00; }
+.chip.ok { background: var(--chip-ok); color: #135c2a; }
+.chip.gris { background: #eceae4; color: #52514e; }
+.barra { display: inline-block; height: 8px; border-radius: 4px; background: var(--real); vertical-align: middle; margin-left: 6px; }
+.barra.pp { background: var(--ppto); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.mini { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.mini .card { padding: 10px 12px; }
+.mini .card.senal { border-color: #e9a3a3; }
+.mini h4 { margin: 0; font-size: 13.5px; font-weight: 650; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.mini h4 span.n { font-weight: 400; color: var(--muted); font-size: 12px; }
+.decision { counter-reset: d; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.decision li { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--brand2); border-radius: 10px; padding: 12px 14px 12px 46px; position: relative; }
+.decision li::before { counter-increment: d; content: counter(d); position: absolute; left: 14px; top: 12px; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 13px; font-weight: 650; display: grid; place-items: center; }
+.glos dt { font-weight: 650; margin-top: 10px; }
+.glos dd { margin: 2px 0 0; color: var(--ink2); }
+ul.lim { margin: 6px 0; padding-left: 20px; }
+ul.lim li { margin: 4px 0; }
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,.14); max-width: 290px; opacity: 0; transition: opacity .08s; }
+#tip b { font-weight: 650; }
+footer { margin-top: 36px; font-size: 12.5px; color: var(--ink2); border-top: 1px solid var(--border); padding-top: 14px; }
+footer p { margin: 4px 0; }
+.wf-row { font-size: 12px; }
+@media (max-width: 520px) {
+  body { font-size: 14.5px; }
+  .titular { font-size: 15px; padding: 14px; }
+  header.marca { padding: 14px; }
+  h1 { font-size: 19px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="marca">
+    <div class="marca-id">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="#fff"><path d="M16 3c1 5 6 7 6 13a6 6 0 0 1-12 0c0-3 2-5 3-7 0 3 1 4 3 5 1-4-1-7 0-11z"/></svg></span>
+      <div><h1>Fogón Express (ficticia)</h1>
+        <div class="sub">Pronóstico con método · cierre 2026 y base para el presupuesto 2027 · 12 locales · empresa y datos <b>ficticios</b></div></div>
+    </div>
+    <div class="corte" id="corte"></div>
+  </header>
+
+  <div class="titular" id="titular"></div>
+  <div class="tiles" id="tiles"></div>
+
+  <!-- (c) real + pronóstico -->
+  <section id="s-pron">
+    <div class="nivel"><span class="tag">Pronóstico</span><h2 id="t-pron"></h2></div>
+    <div class="card">
+      <div class="ctrl">
+        <label>Ver <select id="f-local" aria-label="Elegir red o local"></select></label>
+        <span class="seg" role="group" aria-label="Indicador">
+          <button type="button" data-ind="v" aria-pressed="true">Ventas</button>
+          <button type="button" data-ind="c" aria-pressed="false">Contribución</button>
+        </span>
+        <span class="seg" role="group" aria-label="Moneda">
+          <button type="button" data-mon="c" aria-pressed="true">Moneda constante (oct-26)</button>
+          <button type="button" data-mon="n" aria-pressed="false">Pesos corrientes</button>
+        </span>
+      </div>
+      <div class="leyenda">
+        <span><i style="border-color:var(--real)"></i>Real</span>
+        <span><i class="dash" style="border-color:var(--ppto)"></i>Presupuesto</span>
+        <span><i class="dash" style="border-color:var(--pron)"></i>Pronóstico</span>
+        <span><i class="sq" style="background:var(--pron-band)"></i>Rango probable (80 %)</span>
+      </div>
+      <div id="g-pron"></div>
+      <p class="nota" id="n-pron"></p>
+    </div>
+  </section>
+
+  <!-- (d) backtest -->
+  <section id="s-bt">
+    <div class="nivel"><span class="tag">Qué tan bueno es</span><h2 id="t-bt"></h2></div>
+    <div class="card">
+      <p class="sub" id="bt-diseno"></p>
+      <div class="scroll"><table id="tb-bt"></table></div>
+      <p class="nota" id="bt-criterio"></p>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Contribución: cómo se pasa de ventas a contribución</h3>
+      <div class="scroll"><table id="tb-btc"></table></div>
+      <p class="nota" id="btc-nota"></p>
+    </div>
+  </section>
+
+  <!-- (e) bandas de control -->
+  <section id="s-bandas">
+    <div class="nivel"><span class="tag">Ruido o señal</span><h2 id="t-bandas"></h2></div>
+    <div class="card" style="margin-bottom:12px">
+      <p id="bandas-intro" style="margin-top:0"></p>
+      <div class="ctrl">
+        <span class="seg" role="group" aria-label="Indicador de control">
+          <button type="button" data-band="margen" aria-pressed="true">Margen de contribución</button>
+          <button type="button" data-band="ventas" aria-pressed="false">Ventas</button>
+        </span>
+      </div>
+      <div class="leyenda">
+        <span><i class="sq" style="background:var(--band)"></i>Banda normal (±2 desvíos)</span>
+        <span><i class="dash" style="border-color:var(--axis)"></i>±3 desvíos</span>
+        <span><i class="sq" style="background:var(--warn);border-radius:50%;width:10px"></i>Fuera de banda (mirar)</span>
+        <span><i class="sq" style="background:var(--bad);border-radius:50%;width:10px"></i>Señal (explicar)</span>
+      </div>
+      <p class="nota" id="bandas-def"></p>
+    </div>
+    <div class="mini" id="g-bandas"></div>
+    <div class="card" style="margin-top:14px">
+      <h3>Qué locales tienen que explicar algo</h3>
+      <div class="scroll"><table id="tb-ver" class="ancha"></table></div>
+      <p class="nota" id="ver-nota"></p>
+    </div>
+  </section>
+
+  <!-- (f) inflación -->
+  <section id="s-infl">
+    <div class="nivel"><span class="tag">Inflación</span><h2 id="t-infl"></h2></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ctrl"><span class="seg" role="group" aria-label="Escenario de inflación">
+          <button type="button" data-esc="bajo" aria-pressed="false">IPC bajo</button>
+          <button type="button" data-esc="base" aria-pressed="true">IPC base</button>
+          <button type="button" data-esc="alto" aria-pressed="false">IPC alto</button>
+        </span></div>
+        <div id="g-wf"></div>
+        <p class="nota" id="n-wf"></p>
+      </div>
+      <div class="card">
+        <h3>Ventas y contribución 2027 en pesos corrientes, por escenario</h3>
+        <div class="scroll"><table id="tb-esc" class="chica"></table></div>
+        <p class="nota" id="n-esc"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- (g) decisiones, cómo leer, limitaciones -->
+  <section id="s-dec">
+    <div class="nivel"><span class="tag">Para decidir</span><h2>Qué haría con esto</h2></div>
+    <ol class="decision" id="decisiones"></ol>
+  </section>
+
+  <section>
+    <div class="grid2">
+      <div class="card">
+        <h3>Cómo leer esto (sin estadística)</h3>
+        <dl class="glos" id="glosario"></dl>
+      </div>
+      <div class="card">
+        <h3>Limitaciones (lo que este pronóstico no sabe)</h3>
+        <ul class="lim" id="limites"></ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Fogón Express</b> es una marca ficticia. Los datos se generan con un script (Caso 05 del portfolio) y tienen problemas plantados a propósito para probar el método.</p>
+    <p>Método, definiciones y preguntas frecuentes: <code>07_docs/metodo_y_criterios.md</code>. Cálculo: <code>02_codigo/pronosticar.py</code> (pandas y numpy, sin aleatoriedad).</p>
+    <p id="pie-gen"></p>
+  </footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">/*__DATOS__*/null</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const GEN = '/*__GENERADO__*/';
+
+// ------------------------------------------------------------------ formato es-AR
+const _nf = {};
+const nf = d => (_nf[d] ??= new Intl.NumberFormat('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const MENOS = '−';
+const sgn = (x, s) => s ? (x > 0 ? '+' : x < 0 ? MENOS : '') : (x < 0 ? MENOS : '');
+/** millones -> "$ 1.234,5 M" */
+const NB = ' ';
+const M = (v, d = 1, s = false) => { const r = Math.round(v * 10 ** d) / 10 ** d; return sgn(r, s) + '$' + NB + nf(d).format(Math.abs(r)) + NB + 'M'; };
+/** pesos -> millones */
+const MP = (v, d = 1, s = false) => M(v / 1e6, d, s);
+/** ratio -> "15,4 %" */
+const P = (r, s = true, d = 1) => { const x = Math.round(r * 100 * 10 ** d) / 10 ** d; if (x === 0) return '0' + NB + '%'; return sgn(x, s) + nf(d).format(Math.abs(x)) + NB + '%'; };
+/** puntos porcentuales ya en p.p. -> "+1,2 p.p." */
+const PP = (x, s = true, d = 1) => { const r = Math.round(x * 10 ** d) / 10 ** d; return r === 0 ? '0' + NB + 'p.p.' : sgn(r, s) + nf(d).format(Math.abs(r)) + NB + 'p.p.'; };
+const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const mes = p => MES[+p.slice(5, 7) - 1] + '-' + p.slice(2, 4);
+const mesLargo = p => ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][+p.slice(5, 7) - 1] + ' ' + p.slice(0, 4);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = id => document.getElementById(id);
+const PER = D.periodos.concat(D.periodos_f);
+const NH = D.periodos.length, NF = D.periodos_f.length;
+const R = D.resumen;
+const BT = Object.fromEntries(D.backtest.map(b => [b.id, b]));
+const BTC = Object.fromEntries(D.backtest_contrib.map(b => [b.id, b]));
+const ELEG = BT[D.metodo_elegido];
+const ESC = Object.fromEntries(D.escenarios.map(e => [e.id, e]));
+const LOC = Object.fromEntries(D.locales.map(l => [l.id, l]));
+const S = { local: 'red', ind: 'v', mon: 'c', band: 'margen', esc: 'base' };
+
+// ------------------------------------------------------------------ tooltip
+const tip = $('tip');
+function verTip(html, x, y) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, x + 14)) + 'px';
+  tip.style.top = Math.max(8, (y + h + 20 > innerHeight ? y - h - 12 : y + 14)) + 'px';
+}
+const ocultarTip = () => { tip.style.opacity = 0; };
+
+// ------------------------------------------------------------------ utilidades SVG
+function ticks(min, max, n = 5) {
+  const paso0 = (max - min) / n, mag = 10 ** Math.floor(Math.log10(paso0)), f = paso0 / mag;
+  const paso = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  const out = []; for (let v = Math.ceil(min / paso) * paso; v <= max + 1e-9; v += paso) out.push(+v.toFixed(10));
+  return out;
+}
+const linea = pts => pts.filter(p => p[1] !== null && !isNaN(p[1])).map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
+
+// ------------------------------------------------------------------ (a) titular y (b) tarjetas
+function cabecera() {
+  $('corte').textContent = 'Datos reales hasta ' + mes(D.periodos[NH - 1]) + ' · pronóstico ' + mes(D.periodos_f[0]) + ' a ' + mes(D.periodos_f[NF - 1]);
+  const dV = R.cierre26_V / R.ppto26_V - 1, dC = R.cierre26_C / R.ppto26_C - 1;
+  const g27 = R.v27_const / R.v26_const - 1, e = ESC.base;
+  $('titular').innerHTML =
+    `<b>2026 cierra con ventas por ${MP(R.cierre26_V)}</b> (${P(dV)} sobre el presupuesto en pesos) <b>pero con una contribución de ${MP(R.cierre26_C)}, ${P(-dC, false)} abajo</b>: el presupuesto supuso menos inflación y más clientes de los que hubo. ` +
+    `<b>En 2027, en moneda constante, la venta queda plana (${P(g27)})</b>: con una inflación de ${nf(1).format(e.infl_mensual)}&nbsp;% mensual crecería ${P(e.crec_nominal)} en pesos, y todo eso es precio. ` +
+    `El método elegido se equivocó en promedio ${P(ELEG.anual_wape_red, false)} por mes al pronosticar un año entero; el presupuesto, ${P(BT.ppto.anual_wape_red, false)}, y siempre para arriba.`;
+
+  const t = [
+    { k: 'Cierre 2026 · ventas', v: MP(R.cierre26_V), d: `<span class="${dV >= 0 ? 'up' : ''}">${P(dV)}</span> contra presupuesto (${MP(R.ppto26_V)})<br>Rango 80 %: ${MP(R.cierre26_V_i[0], 0)} a ${MP(R.cierre26_V_i[1], 0)}` },
+    { k: 'Cierre 2026 · contribución', v: MP(R.cierre26_C), d: `${P(dC)} contra presupuesto (${MP(R.ppto26_C)})<br>Rango 80 %: ${MP(R.cierre26_C_i[0], 0)} a ${MP(R.cierre26_C_i[1], 0)}` },
+    { k: 'Ventas 2027 · moneda constante', v: MP(R.v27_const), d: `${P(g27)} contra 2026 · mismos locales ${P(R.v27_const_mismos / R.v26_const_mismos - 1)}<br>Rango 80 %: ${MP(R.v27_const_i[0], 0)} a ${MP(R.v27_const_i[1], 0)}` },
+    { k: 'Contribución 2027 · moneda constante', v: MP(R.c27_const), d: `${P(R.c27_const / R.c26_const - 1)} contra 2026<br>Rango 80 %: ${MP(R.c27_const_i[0], 0)} a ${MP(R.c27_const_i[1], 0)}` },
+    { k: 'Error mensual a 12 meses', v: `${P(ELEG.anual_wape_red, false)} <span style="font-size:.6em;color:var(--ink2);font-weight:500">vs ${P(BT.ppto.anual_wape_red, false)}</span>`, d: `Método elegido contra el presupuesto (WAPE de la red, mismos locales)<br>A 1-3 meses: ${P(ELEG.corto_wape_red, false)} vs ${P(BT.ppto.corto_wape_red, false)}` },
+    { k: 'Sesgo del presupuesto', v: P(BT.ppto.anual_sesgo_red), d: `Sobreestimó el volumen en los 12 meses. En pesos quedó ${P(-R.sesgo_ppto_nominal_12m, false)} corto: supuso ${P(R.infl_supuesta_ppto_12m, false)} de inflación y hubo ${P(R.infl_ultimos_12m, false)}` },
+  ];
+  $('tiles').innerHTML = t.map(x => `<div class="tile"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+}
+
+// ------------------------------------------------------------------ (c) gráfico real + pronóstico
+function datosSerie() {
+  const s = D.series[S.local], i = S.ind, m = S.mon, fac = ESC.base.factor;
+  const k = j => (m === 'n' ? fac[j] : 1);
+  return {
+    real: s[`${i}_real_${m}`], ppto: s[`${i}_ppto_${m}`],
+    pron: s[`${i}_pron`].map((v, j) => v * k(j)), lo: s[`${i}_lo`].map((v, j) => v * k(j)), hi: s[`${i}_hi`].map((v, j) => v * k(j)),
+  };
+}
+function graficoPron() {
+  const cont = $('g-pron'), W = cont.clientWidth, H = W < 520 ? 250 : 320;
+  const m = { l: W < 520 ? 44 : 58, r: 12, t: 14, b: 30 };
+  const x0 = m.l, x1 = W - m.r, y0 = m.t, y1 = H - m.b, N = NH + NF;
+  const s = datosSerie();
+  const todos = [...s.real, ...s.ppto, ...s.lo, ...s.hi].filter(v => v !== null && !isNaN(v));
+  let lo = Math.min(...todos), hi = Math.max(...todos); const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  if (lo > 0 && lo < (hi - lo) * 0.25) lo = 0;
+  const tk = ticks(lo, hi, 5); lo = Math.min(lo, tk[0]); hi = Math.max(hi, tk[tk.length - 1]);
+  const X = j => x0 + (x1 - x0) * j / (N - 1), Y = v => y1 - (y1 - y0) * (v - lo) / (hi - lo);
+  let g = `<svg width="${W}" height="${H}" role="img" aria-label="Real, presupuesto y pronóstico mensual">`;
+  // fondo del pronóstico
+  g += `<rect x="${X(NH - 0.5)}" y="${y0}" width="${x1 - X(NH - 0.5)}" height="${y1 - y0}" fill="#fbf7f3"/>`;
+  tk.forEach(v => { g += `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${x0 - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${nf(0).format(v)}</text>`; });
+  if (lo < 0) g += `<line x1="${x0}" x2="${x1}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--axis)"/>`;
+  // años y meses
+  const cada = W < 520 ? 6 : 3;
+  PER.forEach((p, j) => {
+    if (p.endsWith('-01')) g += `<line x1="${X(j)}" x2="${X(j)}" y1="${y0}" y2="${y1}" stroke="var(--grid)" stroke-dasharray="2 3"/>`;
+    if (j % cada === 0) g += `<text x="${X(j)}" y="${y1 + 18}" text-anchor="middle" font-size="11" fill="var(--muted)">${mes(p)}</text>`;
+  });
+  g += `<line x1="${x0}" x2="${x1}" y1="${y1}" y2="${y1}" stroke="var(--axis)"/>`;
+  // banda
+  const top = s.hi.map((v, j) => [X(NH + j), Y(v)]), bot = s.lo.map((v, j) => [X(NH + j), Y(v)]).reverse();
+  const ult = [X(NH - 1), Y(s.real[NH - 1])];
+  g += `<path d="M${ult[0]},${ult[1]} ${top.map(p => 'L' + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')} ${bot.map(p => 'L' + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')} Z" fill="var(--pron-band)"/>`;
+  g += `<path d="${linea(s.ppto.map((v, j) => [X(j), v === null ? null : Y(v)]))}" fill="none" stroke="var(--ppto)" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  g += `<path d="${linea(s.real.map((v, j) => [X(j), v === null ? null : Y(v)]))}" fill="none" stroke="var(--real)" stroke-width="2.4"/>`;
+  g += `<path d="M${ult[0]},${ult[1]} ${s.pron.map((v, j) => 'L' + X(NH + j).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ')}" fill="none" stroke="var(--pron)" stroke-width="2.4" stroke-dasharray="6 4"/>`;
+  g += `<text x="${X(NH) + 4}" y="${y0 + 14}" font-size="11.5" fill="var(--pron)" font-weight="600">Pronóstico →</text>`;
+  g += `<line id="guia" x1="0" x2="0" y1="${y0}" y2="${y1}" stroke="var(--ink2)" stroke-width="1" opacity="0"/>`;
+  g += `<rect id="capa" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="transparent"/></svg>`;
+  cont.innerHTML = g;
+  const capa = cont.querySelector('#capa'), guia = cont.querySelector('#guia');
+  const mover = ev => {
+    const r = capa.getBoundingClientRect(), j = Math.max(0, Math.min(N - 1, Math.round((ev.clientX - r.left) / r.width * (N - 1))));
+    guia.setAttribute('x1', X(j)); guia.setAttribute('x2', X(j)); guia.setAttribute('opacity', .5);
+    let h = `<b>${mesLargo(PER[j])}</b><br>`;
+    if (j < NH) {
+      h += `Real: ${M(s.real[j])}` + (s.ppto[j] !== null ? `<br>Presupuesto: ${M(s.ppto[j])} (real ${P(s.real[j] / s.ppto[j] - 1)})` : '');
+    } else {
+      const k = j - NH; h += `Pronóstico: ${M(s.pron[k])}<br>Rango 80 %: ${M(s.lo[k])} a ${M(s.hi[k])}`;
+    }
+    verTip(h, ev.clientX, ev.clientY);
+  };
+  capa.addEventListener('pointermove', mover); capa.addEventListener('pointerdown', mover);
+  capa.addEventListener('pointerleave', () => { ocultarTip(); guia.setAttribute('opacity', 0); });
+
+  // título-conclusión y nota
+  const se = D.series[S.local], nom = S.local === 'red' ? 'La red' : `${S.local} ${LOC[S.local].nombre}`;
+  if (S.ind === 'v') {
+    const g27 = se.v27 / se.v26 - 1;
+    $('t-pron').textContent = `${nom}: en 2027 vende ${M(se.v27, 0)} en moneda constante, ${P(g27)} contra 2026`;
+  } else {
+    const gc = se.c27 / se.c26 - 1;   // con una base muy chica (L03 en 2026, por la obra) el % no dice nada: se muestra el valor
+    $('t-pron').textContent = `${nom}: en 2027 aporta ${M(se.c27, 0)} de contribución en moneda constante, ` + (Math.abs(gc) > 1 ? `contra ${M(se.c26, 0)} en 2026` : `${P(gc)} contra 2026`);
+  }
+  const extra = {
+    L03: ' L03 tuvo una obra en la ruta de marzo a agosto de 2026: el modelo no usa esos meses para estimar su nivel, por eso 2027 vuelve a lo normal. Su banda es ancha porque el backtest incluye la obra.',
+    L05: ' L05 abrió en nov-25: sus primeros 6 meses (rampa de apertura) no entrenan el modelo y no tiene backtest propio; su banda usa el error típico de los demás locales.',
+    L07: ` L07 arrastra un problema de personal desde enero: el pronóstico supone que sigue. Si su margen volviera al de 2025, sumaría ${MP(R.l07_valor_2027, 0)} de contribución en 2027.`,
+  }[S.local] || '';
+  $('n-pron').innerHTML = (S.mon === 'c' ? 'Moneda constante: pesos de octubre de 2026 (real deflactado con el IPC real; presupuesto, con el IPC que supuso el propio presupuesto). ' : `Pesos corrientes: el pronóstico se reinfla con el escenario base (${nf(1).format(ESC.base.infl_mensual)}&nbsp;% mensual). `) +
+    `El rango sale de los errores del backtest: 8 de cada 10 meses deberían caer adentro.` + extra;
+}
+
+// ------------------------------------------------------------------ (d) backtest
+function backtest() {
+  const dz = D.backtest_diseno;
+  $('t-bt').textContent = `El presupuesto se equivocó ${nf(1).format(BT.ppto.anual_wape_red / ELEG.anual_wape_red)} veces más que el método elegido, y siempre para arriba`;
+  $('bt-diseno').innerHTML = `<b>Backtest</b>: se entrena cada método solo con lo que se sabía hasta un corte y se mide el error en los meses siguientes, que ya ocurrieron. ` +
+    `<b>A 1-3 meses</b>: ${dz.corto.cortes.length} cortes (${mes(dz.corto.cortes[0])} a ${mes(dz.corto.cortes.at(-1))}), lo que pide un cierre de año. ` +
+    `<b>A 12 meses</b>: corte en ${mes(dz.anual.corte)} y pronóstico de ${mes(dz.anual.meses[0])} a ${mes(dz.anual.meses.at(-1))}, lo mismo que hace un presupuesto. ` +
+    `Solo los 11 locales abiertos todo el período (L05 abrió en nov-25). Todo en moneda constante.`;
+  const maxW = Math.max(...D.backtest.map(b => b.anual_wape_red));
+  const bar = (v, pp) => `<span class="barra${pp ? ' pp' : ''}" style="width:${Math.round(60 * v / maxW)}px"></span>`;
+  const ses = v => `${P(v)}`;
+  let t = `<thead><tr><th class="txt">Método</th><th>Error red<br>a 1-3 meses</th><th>Sesgo<br>a 1-3 meses</th><th>Error red<br>a 12 meses</th><th>Sesgo<br>a 12 meses</th><th>Error por local<br>a 12 meses</th></tr></thead><tbody>`;
+  for (const b of D.backtest) {
+    const el = b.id === D.metodo_elegido, pp = b.id === 'ppto';
+    t += `<tr class="${el ? 'eleg' : pp ? 'ppto' : ''}"><td class="txt">${esc(b.nombre)} ${el ? '<span class="chip eleg">elegido</span>' : pp ? '<span class="chip gris">a vencer</span>' : ''}<span class="desc">${esc(b.desc)}</span></td>` +
+      `<td>${P(b.corto_wape_red, false)}</td><td>${ses(b.corto_sesgo_red)}</td><td>${P(b.anual_wape_red, false)}${bar(b.anual_wape_red, pp)}</td><td>${ses(b.anual_sesgo_red)}</td><td>${P(b.anual_wape_local, false)}</td></tr>`;
+  }
+  $('tb-bt').innerHTML = t + '</tbody>';
+  const ic = BT.ingenuo_crec;
+  $('bt-criterio').innerHTML = `<b>Error</b> = WAPE: suma de los errores en valor absoluto sobre la suma de lo real. <b>Sesgo</b> positivo = el método pronosticó de más. ` +
+    `<b>Por qué este método</b>: el criterio, fijado antes de mirar, es el menor promedio de los cuatro errores (red y local, 1-3 y 12 meses). ` +
+    `A nivel red empata con el ingenuo con crecimiento (las diferencias son de décimas, menores que el ruido), pero por local es claramente mejor (${P(ELEG.anual_wape_local, false)} contra ${P(ic.anual_wape_local, false)}), sirve para L05, que todavía no tiene un año normal, y separa la estacionalidad de la tendencia. ` +
+    `Estimar la estacionalidad de cada local con 24 meses (dos datos por mes) no mejora: un patrón por tipo de local (urbano y ruta) gana.`;
+
+  let c = `<thead><tr><th class="txt">Cómo se pronostica la contribución</th><th>Error red<br>a 1-3 meses</th><th>Sesgo</th><th>Error red<br>a 12 meses</th><th>Sesgo</th><th>Error por local<br>a 12 meses</th></tr></thead><tbody>`;
+  for (const b of D.backtest_contrib) {
+    const el = b.id === D.modo_contribucion, pp = b.id === 'ppto';
+    c += `<tr class="${el ? 'eleg' : pp ? 'ppto' : ''}"><td class="txt">${esc(b.nombre)} ${el ? '<span class="chip eleg">elegido</span>' : pp ? '<span class="chip gris">a vencer</span>' : ''}</td>` +
+      `<td>${P(b.corto_wape_red, false)}</td><td>${P(b.corto_sesgo_red)}</td><td>${P(b.anual_wape_red, false)}</td><td>${P(b.anual_sesgo_red)}</td><td>${P(b.anual_wape_local, false)}</td></tr>`;
+  }
+  $('tb-btc').innerHTML = c + '</tbody>';
+  const pc = BTC[D.modo_contribucion];
+  $('btc-nota').innerHTML = `La contribución es más difícil: es una diferencia entre ventas y costos, y cualquier error se agranda. El modelo de <b>margen variable menos costos fijos</b> (por local, con los últimos 12 meses) capta que en los meses fuertes el margen sube. ` +
+    `Aun así <b>sobreestimó ${P(pc.anual_sesgo_red, false)}</b>: 2026 tuvo una obra, una rotura y un problema de personal, que ningún método prevé. Para el presupuesto, conviene una reserva de ese tamaño.`;
+}
+
+// ------------------------------------------------------------------ (e) bandas de control
+function senales(x) { return x.reglas.some(r => r.length); }
+function bandas() {
+  const B = D.bandas[S.band], sd = B.sd, nombre = S.band === 'margen' ? 'margen' : 'ventas';
+  const meses = D.periodos.slice(NH - 12);
+  const conSenal = D.bandas.ventas.locales.map((x, j) => senales(x) || senales(D.bandas.margen.locales[j]));
+  const nSen = conSenal.filter(Boolean).length;
+  const cp = D.contra_ppto, nPpto = cp.filter(x => x.meses_fuera_nominal > 0).length;
+  const promPpto = cp.reduce((a, x) => a + x.meses_fuera_nominal, 0) / cp.length;
+  const plant = new Set(D.incidentes.map(i => i.local));
+  const coinciden = D.bandas.ventas.locales.filter((x, j) => conSenal[j] && plant.has(x.local)).length;
+  const otros = D.bandas.ventas.locales.map((x, j) => ({ v: x, m: D.bandas.margen.locales[j] })).filter((f, j) => conSenal[j] && !plant.has(f.v.local));
+  const aislados = otros.every(f => [f.v, f.m].every(x => x.reglas.every((r, j) => !r.length || x.z[j] > 0)));
+  $('t-bandas').textContent = `${coinciden} de los ${nSen} locales con señales coinciden con un problema registrado` +
+    (otros.length ? (aislados ? `; los otros ${otros.length} son meses aislados hacia arriba` : `; ${otros.length} no tienen causa registrada`) : '');
+  $('bandas-intro').innerHTML = `Con la regla fija <b>"más de ±5 % contra presupuesto"</b>, <b>${nPpto} de ${cp.length} locales</b> piden explicación (en promedio ${nf(0).format(promPpto)} de cada 12 meses): el presupuesto sesgado genera alarmas en todos lados. ` +
+    `Con <b>bandas de control</b> se compara a cada local con su propio año anterior y con lo que le pasó al resto de la red: <b>${nSen} locales</b> muestran señales y ${coinciden} coinciden con un incidente registrado en el Caso 05.`;
+  $('bandas-def').innerHTML = S.band === 'margen'
+    ? `Indicador: cambio del margen de contribución del local contra el mismo mes del año anterior, menos el cambio mediano de la red (p.p.). Desvío típico: ${PP(sd, false)}.`
+    : `Indicador: crecimiento interanual de las ventas del local en moneda constante, menos el crecimiento mediano de la red (p.p.). Desvío típico: ${PP(sd, false)}.`;
+  $('bandas-def').innerHTML += ` Centro y desvío robustos (mediana y MAD × 1,4826): los meses raros no ensanchan la banda. <b>Señal</b> = un mes fuera de ±3 desvíos, 2 de 3 meses seguidos fuera de ±2 del mismo lado, u 8 meses seguidos del mismo lado.`;
+
+  const cont = $('g-bandas'); cont.innerHTML = '';
+  const fichas = B.locales.map(x => {
+    const s = senales(x), f2 = x.fuera_2;
+    const chip = s ? '<span class="chip bad">señal · explicar</span>' : f2 ? '<span class="chip warn">mirar</span>' : '<span class="chip ok">ruido</span>';
+    return { x, s, html: `<div class="card${s ? ' senal' : ''}"><h4>${x.local} <span class="n">${esc(LOC[x.local].nombre)}</span> ${chip}</h4><div class="mg"></div></div>` };
+  });
+  fichas.sort((a, b) => (b.s - a.s) || (b.x.fuera_2 - a.x.fuera_2) || a.x.local.localeCompare(b.x.local));
+  cont.innerHTML = fichas.map(f => f.html).join('') + `<div class="card"><h4>L05 <span class="n">${esc(LOC.L05.nombre)}</span> <span class="chip gris">sin año anterior</span></h4><p class="nota">Abrió en nov-25: recién en nov-26 tiene contra qué compararse.</p></div>`;
+  const mgs = cont.querySelectorAll('.mg');
+  fichas.forEach((f, idx) => {
+    const el = mgs[idx], W = el.clientWidth || 240, H = 118, m = { l: 34, r: 6, t: 8, b: 18 };
+    const vals = f.x.valores, L = Math.max(3.4 * sd, ...vals.map(Math.abs)) * 1.08;
+    const X = j => m.l + (W - m.l - m.r) * j / 11, Y = v => m.t + (H - m.t - m.b) * (L - v) / (2 * L);
+    let g = `<svg width="${W}" height="${H}">`;
+    g += `<rect x="${m.l}" y="${Y(2 * sd)}" width="${W - m.l - m.r}" height="${Y(-2 * sd) - Y(2 * sd)}" fill="var(--band)"/>`;
+    [3, -3].forEach(k => { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(k * sd)}" y2="${Y(k * sd)}" stroke="var(--axis)" stroke-dasharray="3 3"/>`; });
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--axis)"/>`;
+    const marcas = (Y(-2 * sd) - Y(2 * sd) >= 26) ? [2 * sd, 0, -2 * sd] : [Math.floor(L), 0, -Math.floor(L)];
+    marcas.forEach(v => { g += `<text x="${m.l - 4}" y="${Y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${v > 0 ? '+' : v < 0 ? MENOS : ''}${nf(0).format(Math.abs(v))}</text>`; });
+    g += `<text x="${X(0)}" y="${H - 4}" font-size="10" fill="var(--muted)">${mes(meses[0])}</text><text x="${X(11)}" y="${H - 4}" text-anchor="end" font-size="10" fill="var(--muted)">${mes(meses[11])}</text>`;
+    g += `<path d="${linea(vals.map((v, j) => [X(j), Y(v)]))}" fill="none" stroke="#9aa3b2" stroke-width="1.4"/>`;
+    vals.forEach((v, j) => {
+      const r = f.x.reglas[j].length, z = Math.abs(f.x.z[j]);
+      const col = r ? 'var(--bad)' : z > 2 ? 'var(--warn)' : '#6b7a90';
+      g += `<circle cx="${X(j)}" cy="${Y(v)}" r="${r || z > 2 ? 4.2 : 2.8}" fill="${col}" data-j="${j}"/>`;
+      g += `<circle cx="${X(j)}" cy="${Y(v)}" r="11" fill="transparent" data-j="${j}"/>`;
+    });
+    el.innerHTML = g + '</svg>';
+    const regla = { 1: 'un mes fuera de ±3 desvíos', 2: '2 de 3 meses fuera de ±2', 3: '8 meses seguidos del mismo lado' };
+    el.querySelector('svg').addEventListener('pointerover', ev => {
+      const j = ev.target.dataset && ev.target.dataset.j; if (j === undefined) return;
+      const rr = f.x.reglas[+j];
+      verTip(`<b>${f.x.local} · ${mesLargo(meses[+j])}</b><br>${S.band === 'margen' ? 'Margen' : 'Ventas'} contra la red: ${PP(vals[+j])}<br>${nf(1).format(f.x.z[+j]).replace('-', MENOS)} desvíos típicos` + (rr.length ? `<br><b style="color:var(--bad)">Señal:</b> ${rr.map(k => regla[k]).join('; ')}` : ''), ev.clientX, ev.clientY);
+    });
+    el.querySelector('svg').addEventListener('pointerout', ocultarTip);
+  });
+
+  // veredicto por local
+  const filas = D.bandas.ventas.locales.map((xv, j) => ({ v: xv, m: D.bandas.margen.locales[j] })).filter(f => senales(f.v) || senales(f.m));
+  const desc = x => {
+    const ms = x.reglas.map((r, j) => r.length ? j : -1).filter(j => j >= 0);
+    if (!ms.length) return '<span class="chip ok">ruido</span>';
+    const dir = x.z[ms[0]] < 0 ? 'abajo' : 'arriba';
+    return `<span class="chip bad">señal</span> ${ms.length === 1 ? mes(meses[ms[0]]) : mes(meses[ms[0]]) + ' a ' + mes(meses[ms.at(-1)])}, hacia ${dir}`;
+  };
+  let t = `<thead><tr><th class="txt">Local</th><th class="txt">Ventas</th><th class="txt">Margen</th><th class="txt">Causa en el registro de incidentes</th><th class="txt">Qué hacer</th></tr></thead><tbody>`;
+  for (const f of filas) {
+    const id = f.v.local, inc = D.incidentes.filter(i => i.local === id);
+    const ult = Math.max(...[f.v, f.m].flatMap(x => x.reglas.map((r, j) => r.length ? j : -1)));
+    const abajo = [f.v, f.m].some(x => x.reglas.some((r, j) => r.length && x.z[j] < 0));
+    let accion;
+    if (inc.length && ult >= 10) accion = `<b>Sigue abierto</b>: plan de acción con responsable. ${id === 'L07' ? `Vale ${MP(R.l07_valor_2027, 0)} de contribución en 2027.` : ''}`;
+    else if (inc.length) accion = 'Explicado y terminado: no se arrastra al pronóstico 2027.';
+    else if (!abajo) accion = 'Hacia arriba y sin causa registrada: preguntar qué pasó (¿algo para copiar?). Puede ser azar.';
+    else accion = 'Sin causa registrada: pedir explicación al gerente del local.';
+    t += `<tr><td class="txt"><b>${id}</b> ${esc(LOC[id].nombre)}</td><td class="txt">${desc(f.v)}</td><td class="txt">${desc(f.m)}</td>` +
+      `<td class="txt">${inc.length ? inc.map(i => `${esc(i.tipo)} (${i.fecha.split('-').reverse().join('/')}): ${esc(i.detalle)}`).join('<br>') : '—'}</td><td class="txt">${accion}</td></tr>`;
+  }
+  $('tb-ver').innerHTML = t + '</tbody>';
+  $('ver-nota').textContent = `Con ${D.bandas.ventas.locales.length * 12 * 2} mediciones (11 locales × 12 meses × 2 indicadores), alguna falsa alarma es esperable: por eso un solo mes hacia arriba sin causa se pregunta, no se premia ni se castiga. L07 casi no se ve en ventas (su caída es del tamaño del ruido mensual) pero sí en el margen: por eso se miran los dos.`;
+}
+
+// ------------------------------------------------------------------ (f) inflación
+function inflacion() {
+  const e = ESC[S.esc], v26 = e.ventas_2026, v27 = e.ventas_2027;
+  const vol = v26 * e.crec_real, precio = v27 - v26 - vol;
+  $('t-infl').textContent = `En 2027 todo el crecimiento en pesos es precio: entre ${P(ESC.bajo.crec_nominal)} y ${P(ESC.alto.crec_nominal)} según la inflación, con el volumen plano`;
+  const cont = $('g-wf'), W = cont.clientWidth, H = 230, m = { l: 8, r: 8, t: 22, b: 40 };
+  const pasos = [
+    { n: 'Ventas 2026', a: 0, b: v26, c: 'var(--real)' },
+    { n: 'Volumen', a: v26, b: v26 + vol, c: vol < 0 ? 'var(--bad)' : 'var(--good)' },
+    { n: 'Precio (inflación)', a: v26 + vol, b: v27, c: 'var(--pron)' },
+    { n: 'Ventas 2027', a: 0, b: v27, c: 'var(--real)' },
+  ];
+  const max = Math.max(...pasos.map(p => Math.max(p.a, p.b))) * 1.08;
+  const bw = (W - m.l - m.r) / pasos.length, Y = v => m.t + (H - m.t - m.b) * (1 - v / max);
+  let g = `<svg width="${W}" height="${H}" role="img" aria-label="Puente de ventas 2026 a 2027">`;
+  pasos.forEach((p, i) => {
+    const x = m.l + i * bw + bw * 0.18, w = bw * 0.64, y = Y(Math.max(p.a, p.b)), h = Math.max(1.5, Math.abs(Y(p.a) - Y(p.b)));
+    g += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${p.c}" rx="3"/>`;
+    const val = i === 0 || i === 3 ? MP(p.b, 0) : MP(p.b - p.a, 0, true);
+    g += `<text x="${x + w / 2}" y="${y - 6}" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)">${val}</text>`;
+    g += `<text x="${x + w / 2}" y="${H - m.b + 16}" text-anchor="middle" font-size="11" fill="var(--ink2)">${p.n}</text>`;
+    if (i < 3) g += `<line x1="${x + w}" x2="${x + bw}" y1="${Y(p.b)}" y2="${Y(p.b)}" stroke="var(--axis)" stroke-dasharray="2 2"/>`;
+  });
+  cont.innerHTML = g + '</svg>';
+  $('n-wf').innerHTML = `Escenario ${S.esc}: ${nf(1).format(e.infl_mensual)}&nbsp;% mensual (${nf(1).format(e.infl_anual)}&nbsp;% anual). De un crecimiento nominal de ${P(e.crec_nominal)}, el volumen aporta ${P(e.crec_real)} y el precio ${P(e.efecto_precio)}. ` +
+    `Supuesto: los precios de la carta siguen al IPC desde oct-26 con el mismo atraso que en 2026 (ese atraso ya está en la tendencia en moneda constante).`;
+  let t = `<thead><tr><th class="txt">Escenario</th><th>Inflación<br>mensual</th><th>Inflación<br>2027</th><th>Ventas 2027</th><th>Crecimiento<br>nominal</th><th>Del cual<br>precio</th><th>Contribución 2027</th></tr></thead><tbody>`;
+  for (const k of ['bajo', 'base', 'alto']) {
+    const x = ESC[k];
+    t += `<tr class="${k === S.esc ? 'eleg' : ''}"><td class="txt">${k[0].toUpperCase() + k.slice(1)}</td><td>${nf(1).format(x.infl_mensual)}&nbsp;%</td><td>${nf(1).format(x.infl_anual)}&nbsp;%</td><td>${MP(x.ventas_2027, 0)}</td><td>${P(x.crec_nominal)}</td><td>${P(x.efecto_precio)}</td><td>${MP(x.contrib_2027, 0)}</td></tr>`;
+  }
+  $('tb-esc').innerHTML = t + '</tbody>';
+  $('n-esc').innerHTML = `<b>Bajo</b> = la inflación que supuso el presupuesto 2026 (${nf(1).format(ESC.bajo.infl_mensual)} %), que resultó corta. <b>Base</b> = el promedio de los últimos 3 meses. <b>Alto</b> = el promedio de los últimos 12 meses. ` +
+    `En moneda constante las tres dan lo mismo: ventas ${MP(R.v27_const, 0)} y contribución ${MP(R.c27_const, 0)} (pesos de oct-26). Rango 80 % de las ventas en el escenario base: ${MP(ESC.base.ventas_2027_i[0], 0)} a ${MP(ESC.base.ventas_2027_i[1], 0)}.`;
+}
+
+// ------------------------------------------------------------------ (g) decisiones, glosario, limitaciones
+function textos() {
+  const pc = BTC[D.modo_contribucion];
+  $('decisiones').innerHTML = [
+    `<b>Armar el presupuesto 2027 en moneda constante y reinflarlo con un IPC explícito.</b> El de 2026 mezcló dos supuestos y erró los dos: ${P(BT.ppto.anual_sesgo_red)} de volumen de más y ${P(R.infl_supuesta_ppto_12m, false)} de inflación contra ${P(R.infl_ultimos_12m, false)}. Base en volumen: ${MP(R.v27_const, 0)} (plano). No suponer crecimiento de clientes sin una acción que lo explique: en los locales sin problemas los tickets crecieron ${P(R.tickets_yoy)} y el ticket promedio real cayó ${P(R.ticket_real_yoy)}.`,
+    `<b>Pedir explicación solo donde hay señal.</b> L03 (obra) y L10 (rotura) ya pasaron. <b>L07 sigue</b>: su margen cayó de ${P(R.l07_margen_2025, false)} a ${P(R.l07_margen_2027, false)} por la rotación de personal; arreglarlo vale ${MP(R.l07_valor_2027, 0)} de contribución en 2027. Los demás desvíos contra presupuesto son el sesgo del presupuesto, no la gestión del local.`,
+    `<b>Revisar la política de precios.</b> La carta se actualiza con un mes de atraso: en moneda constante el ticket pierde alrededor de ${P(-R.ticket_real_yoy, false)} por año, y eso explica casi toda la caída de la venta real. Y presupuestar la contribución con una reserva: aun con buen método, en 2026 la real quedó ${P(pc.anual_sesgo_red, false)} abajo de lo pronosticado, porque los problemas operativos no se pronostican pero pasan.`,
+  ].map(x => `<li>${x}</li>`).join('');
+
+  const iv = D.incertidumbre_ventas;
+  $('glosario').innerHTML = [
+    ['Moneda constante', 'Todo expresado en pesos de octubre de 2026, sacando la inflación. Si la venta en moneda constante no crece, vendimos lo mismo aunque haya más pesos.'],
+    ['Backtest', 'Hacer de cuenta que estamos en el pasado: pronosticar con lo que se sabía entonces y comparar con lo que pasó después. Es la única forma honesta de saber si un método sirve.'],
+    ['Error (WAPE)', `Cuánto se equivoca el pronóstico, en % de lo real, sin importar si es para arriba o para abajo. ${P(ELEG.anual_wape_red, false)} quiere decir que en un mes de $ 1.500 M el error típico es de unos ${M(1500 * ELEG.anual_wape_red, 0)}.`],
+    ['Sesgo', 'Si el error va siempre para el mismo lado. Un pronóstico puede tener poco error y sesgo cero; el presupuesto tuvo error alto y todo sesgo: siempre de más.'],
+    ['Rango probable (80 %)', `El pronóstico no es un número sino una zona: 8 de cada 10 meses deberían caer adentro. Sale de los errores del backtest (±${P(1.2816 * iv.corto, false)} a 1-3 meses en la red).`],
+    ['Bandas de control', 'El "ruido normal" de un local. Si un mes sale de la banda, o varios meses seguidos se van para el mismo lado, es señal: vale preguntar. Si no, es ruido: explicarlo es perder el tiempo.'],
+  ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+
+  $('limites').innerHTML = [
+    `Hay <b>24 meses de historia</b>: cada mes del año se vio solo dos veces. Por eso la estacionalidad se estima por tipo de local (urbano y ruta) y no local por local, y la tendencia se estima solo con 18 meses o más.`,
+    `El backtest cubre <b>un solo año</b> (2026), que tuvo tres problemas operativos. Otro año podría dar errores distintos.`,
+    `<b>Nov-dic 2027</b> (meses 13 y 14) no tienen respaldo en el backtest, que llega a 12 meses: la banda podría quedar corta.`,
+    `El rango no incluye la incertidumbre de la inflación (para eso están los escenarios) ni shocks como otra obra o una apertura: supone que el error futuro se parece al pasado.`,
+    `Supone que <b>L07 sigue igual</b>, que no abren ni cierran locales y que los precios mantienen el atraso de 2026. L05 tiene solo 6 meses después de su rampa de apertura.`,
+    `El presupuesto de <b>nov-dic 2026</b> no está en los datos: se completó con los supuestos del propio presupuesto (mismo patrón de nov y dic de 2025 y ${nf(1).format(1.6)}&nbsp;% de inflación mensual).`,
+    `Datos ficticios con problemas plantados: sirve para mostrar el método; los números no describen ninguna empresa real.`,
+  ].map(x => `<li>${x}</li>`).join('');
+  $('pie-gen').textContent = `Tablero generado el ${GEN} con ${D.metodo_elegido_nombre.toLowerCase()} como método.`;
+}
+
+// ------------------------------------------------------------------ armado y eventos
+const sel = $('f-local');
+sel.innerHTML = `<option value="red">Toda la red</option>` + D.locales.map(l => `<option value="${l.id}">${l.id} ${esc(l.nombre)}</option>`).join('');
+sel.addEventListener('change', () => { S.local = sel.value; graficoPron(); });
+const grupo = (attr, clave, fn) => document.querySelectorAll(`[data-${attr}]`).forEach(b => b.addEventListener('click', () => {
+  S[clave] = b.dataset[attr];
+  document.querySelectorAll(`[data-${attr}]`).forEach(x => x.setAttribute('aria-pressed', x === b));
+  fn();
+}));
+grupo('ind', 'ind', graficoPron); grupo('mon', 'mon', graficoPron); grupo('band', 'band', bandas); grupo('esc', 'esc', inflacion);
+function todo() { cabecera(); graficoPron(); backtest(); bandas(); inflacion(); textos(); }
+todo();
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { graficoPron(); bandas(); inflacion(); }, 150); });
+</script>
+</body>
+</html>

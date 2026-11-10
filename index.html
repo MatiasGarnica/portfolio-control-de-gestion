@@ -12,7 +12,7 @@
   main{max-width:880px;margin:0 auto;padding:48px max(16px,env(safe-area-inset-left)) 56px max(16px,env(safe-area-inset-right))}
   h1{font-size:1.9rem;line-height:1.2;margin:0 0 .4rem;text-wrap:balance}
   .lead{color:var(--mute);margin:0 0 2rem;max-width:62ch}
-  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
   .card img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;object-position:top;border-bottom:1px solid var(--line)}
   .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
@@ -22,6 +22,8 @@
   .links{margin-top:auto;display:flex;flex-wrap:wrap;gap:8px;padding-top:6px}
   a.btn{background:var(--acc2);color:var(--acc);text-decoration:none;font-weight:600;font-size:.88rem;padding:6px 12px;border-radius:8px}
   a.btn:hover{background:var(--acc);color:#fff}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:.74rem;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:2px 9px}
   footer{margin-top:2.5rem;color:var(--mute);font-size:.9rem;border-top:1px solid var(--line);padding-top:16px}
   footer a{color:var(--acc)}
 </style>
@@ -38,9 +40,23 @@
         <span class="tag">Caso 05 · Cadena de 12 locales</span>
         <h2>Del desvío de la red a la causa en tres clics</h2>
         <p>Presupuesto, año anterior y mes anterior; moneda constante; comparación contra pares; demo con login por rol.</p>
+        <div class="chips"><span class="chip">Ejecutivo</span><span class="chip">Económico</span><span class="chip">Seguridad por rol</span></div>
         <div class="links">
           <a class="btn" href="casos/05_cadena-multisucursal/03_tableros/tablero_direccion.html">Tablero</a>
           <a class="btn" href="casos/05_cadena-multisucursal/03_tableros/demo_login.html">Demo con login</a>
+        </div>
+      </div>
+    </article>
+    <article class="card">
+      <img src="casos/06_pronostico-con-metodo/03_tableros/captura_tablero.png" alt="Pronóstico de ventas con rango probable">
+      <div class="body">
+        <span class="tag">Caso 06 · Misma cadena</span>
+        <h2>Pronóstico con método</h2>
+        <p>Cierre 2026 y base del presupuesto 2027. El presupuesto se equivocó 3 veces más que el método elegido, y siempre para arriba.</p>
+        <div class="chips"><span class="chip">Estadístico</span><span class="chip">FP&amp;A</span><span class="chip">Inflación</span></div>
+        <div class="links">
+          <a class="btn" href="casos/06_pronostico-con-metodo/03_tableros/pronostico.html">Tablero</a>
+          <a class="btn" href="https://github.com/MatiasGarnica/portfolio-control-de-gestion/tree/main/casos/06_pronostico-con-metodo">Método</a>
         </div>
       </div>
     </article>
@@ -50,6 +66,7 @@
         <span class="tag">Caso 02 · Distribuidora</span>
         <h2>¿Cae el mercado o cae la gestión?</h2>
         <p>Formulario de un minuto para repartidores cruzado con la venta por ruta, con resumen y alerta semanal.</p>
+        <div class="chips"><span class="chip">Comercial</span><span class="chip">Captura de datos</span><span class="chip">Automatización</span></div>
         <div class="links">
           <a class="btn" href="casos/02_voz-de-primera-linea/03_tableros/voz_primera_linea.html">Tablero</a>
         </div>
@@ -61,6 +78,7 @@
         <span class="tag">SQL + Power BI</span>
         <h2>BI de una distribuidora de agua y soda</h2>
         <p>15 consultas T-SQL en 8 módulos, 11 tableros rediseñados y 17 medidas DAX sobre un dataset sintético de 21 tablas.</p>
+        <div class="chips"><span class="chip">SQL</span><span class="chip">Power BI y DAX</span><span class="chip">Cobranzas</span></div>
         <div class="links">
           <a class="btn" href="https://github.com/MatiasGarnica/portfolio-control-de-gestion/tree/main/powerbi">Tableros</a>
           <a class="btn" href="https://github.com/MatiasGarnica/portfolio-control-de-gestion/tree/main/sql">Consultas</a>

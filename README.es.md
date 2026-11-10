@@ -23,6 +23,17 @@ La dirección ve el desvío de contribución contra el presupuesto, el ranking d
 
 ▶ [Ver el tablero](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/05_cadena-multisucursal/03_tableros/tablero_direccion.html) · ▶ [Ver la demo con login](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/05_cadena-multisucursal/03_tableros/demo_login.html) · [Documentación del caso](casos/05_cadena-multisucursal/)
 
+### Pronóstico con método · ¿qué tan bueno es el forecast?
+
+![Pronóstico con rango probable](casos/06_pronostico-con-metodo/03_tableros/captura_tablero.png)
+
+El cierre 2026 y la base del presupuesto 2027 de la misma cadena. Antes de elegir un método, lo prueba contra el pasado:
+- **Backtest:** el método elegido se equivoca 2,1 % por mes al pronosticar un año entero. El presupuesto se equivocó 6,7 %, y siempre para arriba.
+- **Precio contra volumen:** en moneda constante, 2027 queda plano. Todo el crecimiento en pesos es inflación, y se muestra con tres escenarios.
+- **¿Ruido o señal?:** bandas de control por local. Con la regla fija del ±5 % había que explicar casi todo; con las bandas aparecen los tres problemas reales.
+
+▶ [Ver el tablero](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/06_pronostico-con-metodo/03_tableros/pronostico.html) · [Método y criterios](casos/06_pronostico-con-metodo/07_docs/metodo_y_criterios.md)
+
 ### Voz de primera línea · ¿cae el mercado o cae la gestión?
 
 Un formulario de un minuto para repartidores y atención al cliente, con categorías fijas, cruzado con las ventas por ruta. Separa la caída que viene del mercado (todas las rutas reportan "situación económica") de la que es propia de una ruta (una sola reporta "competencia"). Incluye un Apps Script que arma el resumen y la alerta de cada lunes.

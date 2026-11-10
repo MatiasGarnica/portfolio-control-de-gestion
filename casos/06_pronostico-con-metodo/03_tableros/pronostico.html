@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pronóstico con método</title>
+<meta name="description" content="Caso 06 · Pronóstico de ventas y contribución con backtest, intervalos, escenarios de inflación y bandas de control. Empresa y datos ficticios.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #eef1f5; --surface: #ffffff; --ink: #0b0b0b; --ink2: #52514e; --muted: #77756f;
+  --grid: #e7eaef; --axis: #c3c2b7; --border: #d6dbe3; --thead: #f3f5f8; --zebra: #fafbfc;
+  --brand: #9a3412; --brand2: #ea580c;
+  --real: #2a78d6; --pron: #c2410c; --pron-band: rgba(234,88,12,.16); --ppto: #898781;
+  --band: rgba(42,120,214,.10); --good: #0f7a2e; --bad: #d03b3b; --warn: #b7791f;
+  --chip-bad: #fde8e8; --chip-warn: #fdf3df; --chip-ok: #e8f5ec;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+h2 { font-size: 18px; margin: 0; font-weight: 650; }
+h3 { font-size: 14px; margin: 0 0 6px; font-weight: 650; color: var(--ink2); }
+p { margin: 6px 0; }
+.sub { color: var(--ink2); font-size: 13px; }
+button, select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; min-height: 36px; }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--real); outline-offset: 2px; }
+header.marca { border-radius: 14px; padding: 16px 18px; color: #fff; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: linear-gradient(120deg, var(--brand), var(--brand2)); box-shadow: 0 4px 14px rgba(16,24,40,.12); }
+header.marca .sub { color: rgba(255,255,255,.9); }
+.marca-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.logo { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.16); }
+.logo svg { width: 30px; height: 30px; }
+.corte { font-size: 13px; background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 12px; }
+section { margin-top: 30px; }
+.nivel { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; border-left: 4px solid var(--brand2); padding-left: 10px; }
+.nivel .tag { font-size: 12px; font-weight: 650; color: var(--brand); text-transform: uppercase; letter-spacing: .04em; }
+.card, .tile, .titular { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 3px 8px rgba(16,24,40,.06); min-width: 0; }
+.titular { padding: 16px 18px; margin-top: 16px; font-size: 16px; line-height: 1.55; }
+.titular b { font-weight: 650; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 14px; }
+.tile { padding: 12px 14px; border-top: 3px solid var(--brand2); }
+.tile .k { font-size: 13px; color: var(--ink2); }
+.tile .v { font-size: clamp(19px, 2.1vw, 23px); font-weight: 650; margin: 2px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tile .d { font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+.card { padding: 14px; }
+.ctrl { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+.ctrl label { font-size: 13px; color: var(--ink2); display: flex; gap: 6px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+.seg button { border: 0; border-radius: 0; padding: 6px 10px; }
+.seg button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); margin: 2px 0 6px; }
+.leyenda i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.leyenda i.dash { border-top-style: dashed; }
+.leyenda i.sq { width: 12px; height: 10px; border: 0; }
+svg { display: block; overflow: visible; }
+svg text { font-family: inherit; }
+.nota { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scroll table { min-width: 620px; }
+.scroll table.ancha { min-width: 760px; }
+.scroll table.chica { min-width: 470px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; font-size: 12px; background: var(--thead); white-space: normal; }
+th:first-child, td:first-child { text-align: left; }
+td.txt, th.txt { text-align: left; white-space: normal; font-variant-numeric: normal; }
+tbody tr:nth-child(even) td { background: var(--zebra); }
+tr.eleg td { background: #fff4ec !important; font-weight: 600; }
+tr.ppto td { background: #f4f4f2 !important; }
+.desc { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); white-space: normal; }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chip.eleg { background: var(--brand); color: #fff; }
+.chip.bad { background: var(--chip-bad); color: #9b1c1c; }
+.chip.warn { background: var(--chip-warn); color: #7a4a00; }
+.chip.ok { background: var(--chip-ok); color: #135c2a; }
+.chip.gris { background: #eceae4; color: #52514e; }
+.barra { display: inline-block; height: 8px; border-radius: 4px; background: var(--real); vertical-align: middle; margin-left: 6px; }
+.barra.pp { background: var(--ppto); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.mini { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.mini .card { padding: 10px 12px; }
+.mini .card.senal { border-color: #e9a3a3; }
+.mini h4 { margin: 0; font-size: 13.5px; font-weight: 650; display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.mini h4 span.n { font-weight: 400; color: var(--muted); font-size: 12px; }
+.decision { counter-reset: d; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.decision li { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--brand2); border-radius: 10px; padding: 12px 14px 12px 46px; position: relative; }
+.decision li::before { counter-increment: d; content: counter(d); position: absolute; left: 14px; top: 12px; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 13px; font-weight: 650; display: grid; place-items: center; }
+.glos dt { font-weight: 650; margin-top: 10px; }
+.glos dd { margin: 2px 0 0; color: var(--ink2); }
+ul.lim { margin: 6px 0; padding-left: 20px; }
+ul.lim li { margin: 4px 0; }
+#tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 16px rgba(0,0,0,.14); max-width: 290px; opacity: 0; transition: opacity .08s; }
+#tip b { font-weight: 650; }
+footer { margin-top: 36px; font-size: 12.5px; color: var(--ink2); border-top: 1px solid var(--border); padding-top: 14px; }
+footer p { margin: 4px 0; }
+.wf-row { font-size: 12px; }
+@media (max-width: 520px) {
+  body { font-size: 14.5px; }
+  .titular { font-size: 15px; padding: 14px; }
+  header.marca { padding: 14px; }
+  h1 { font-size: 19px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="marca">
+    <div class="marca-id">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="#fff"><path d="M16 3c1 5 6 7 6 13a6 6 0 0 1-12 0c0-3 2-5 3-7 0 3 1 4 3 5 1-4-1-7 0-11z"/></svg></span>
+      <div><h1>Fogón Express (ficticia)</h1>
+        <div class="sub">Pronóstico con método · cierre 2026 y base para el presupuesto 2027 · 12 locales · empresa y datos <b>ficticios</b></div></div>
+    </div>
+    <div class="corte" id="corte"></div>
+  </header>
+
+  <div class="titular" id="titular"></div>
+  <div class="tiles" id="tiles"></div>
+
+  <!-- (c) real + pronóstico -->
+  <section id="s-pron">
+    <div class="nivel"><span class="tag">Pronóstico</span><h2 id="t-pron"></h2></div>
+    <div class="card">
+      <div class="ctrl">
+        <label>Ver <select id="f-local" aria-label="Elegir red o local"></select></label>
+        <span class="seg" role="group" aria-label="Indicador">
+          <button type="button" data-ind="v" aria-pressed="true">Ventas</button>
+          <button type="button" data-ind="c" aria-pressed="false">Contribución</button>
+        </span>
+        <span class="seg" role="group" aria-label="Moneda">
+          <button type="button" data-mon="c" aria-pressed="true">Moneda constante (oct-26)</button>
+          <button type="button" data-mon="n" aria-pressed="false">Pesos corrientes</button>
+        </span>
+      </div>
+      <div class="leyenda">
+        <span><i style="border-color:var(--real)"></i>Real</span>
+        <span><i class="dash" style="border-color:var(--ppto)"></i>Presupuesto</span>
+        <span><i class="dash" style="border-color:var(--pron)"></i>Pronóstico</span>
+        <span><i class="sq" style="background:var(--pron-band)"></i>Rango probable (80 %)</span>
+      </div>
+      <div id="g-pron"></div>
+      <p class="nota" id="n-pron"></p>
+    </div>
+  </section>
+
+  <!-- (d) backtest -->
+  <section id="s-bt">
+    <div class="nivel"><span class="tag">Qué tan bueno es</span><h2 id="t-bt"></h2></div>
+    <div class="card">
+      <p class="sub" id="bt-diseno"></p>
+      <div class="scroll"><table id="tb-bt"></table></div>
+      <p class="nota" id="bt-criterio"></p>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Contribución: cómo se pasa de ventas a contribución</h3>
+      <div class="scroll"><table id="tb-btc"></table></div>
+      <p class="nota" id="btc-nota"></p>
+    </div>
+  </section>
+
+  <!-- (e) bandas de control -->
+  <section id="s-bandas">
+    <div class="nivel"><span class="tag">Ruido o señal</span><h2 id="t-bandas"></h2></div>
+    <div class="card" style="margin-bottom:12px">
+      <p id="bandas-intro" style="margin-top:0"></p>
+      <div class="ctrl">
+        <span class="seg" role="group" aria-label="Indicador de control">
+          <button type="button" data-band="margen" aria-pressed="true">Margen de contribución</button>
+          <button type="button" data-band="ventas" aria-pressed="false">Ventas</button>
+        </span>
+      </div>
+      <div class="leyenda">
+        <span><i class="sq" style="background:var(--band)"></i>Banda normal (±2 desvíos)</span>
+        <span><i class="dash" style="border-color:var(--axis)"></i>±3 desvíos</span>
+        <span><i class="sq" style="background:var(--warn);border-radius:50%;width:10px"></i>Fuera de banda (mirar)</span>
+        <span><i class="sq" style="background:var(--bad);border-radius:50%;width:10px"></i>Señal (explicar)</span>
+      </div>
+      <p class="nota" id="bandas-def"></p>
+    </div>
+    <div class="mini" id="g-bandas"></div>
+    <div class="card" style="margin-top:14px">
+      <h3>Qué locales tienen que explicar algo</h3>
+      <div class="scroll"><table id="tb-ver" class="ancha"></table></div>
+      <p class="nota" id="ver-nota"></p>
+    </div>
+  </section>
+
+  <!-- (f) inflación -->
+  <section id="s-infl">
+    <div class="nivel"><span class="tag">Inflación</span><h2 id="t-infl"></h2></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="ctrl"><span class="seg" role="group" aria-label="Escenario de inflación">
+          <button type="button" data-esc="bajo" aria-pressed="false">IPC bajo</button>
+          <button type="button" data-esc="base" aria-pressed="true">IPC base</button>
+          <button type="button" data-esc="alto" aria-pressed="false">IPC alto</button>
+        </span></div>
+        <div id="g-wf"></div>
+        <p class="nota" id="n-wf"></p>
+      </div>
+      <div class="card">
+        <h3>Ventas y contribución 2027 en pesos corrientes, por escenario</h3>
+        <div class="scroll"><table id="tb-esc" class="chica"></table></div>
+        <p class="nota" id="n-esc"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- (g) decisiones, cómo leer, limitaciones -->
+  <section id="s-dec">
+    <div class="nivel"><span class="tag">Para decidir</span><h2>Qué haría con esto</h2></div>
+    <ol class="decision" id="decisiones"></ol>
+  </section>
+
+  <section>
+    <div class="grid2">
+      <div class="card">
+        <h3>Cómo leer esto (sin estadística)</h3>
+        <dl class="glos" id="glosario"></dl>
+      </div>
+      <div class="card">
+        <h3>Limitaciones (lo que este pronóstico no sabe)</h3>
+        <ul class="lim" id="limites"></ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Fogón Express</b> es una marca ficticia. Los datos se generan con un script (Caso 05 del portfolio) y tienen problemas plantados a propósito para probar el método.</p>
+    <p>Método, definiciones y preguntas frecuentes: <code>07_docs/metodo_y_criterios.md</code>. Cálculo: <code>02_codigo/pronosticar.py</code> (pandas y numpy, sin aleatoriedad).</p>
+    <p id="pie-gen"></p>
+  </footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">{"periodos":["2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10"],"periodos_f":["2026-11","2026-12","2027-01","2027-02","2027-03","2027-04","2027-05","2027-06","2027-07","2027-08","2027-09","2027-10","2027-11","2027-12"],"locales":[{"id":"L01","nombre":"Plaza Norte","region":"Norte","formato":"Calle","apertura":"2018-03","comparable":true},{"id":"L02","nombre":"Shopping Norte","region":"Norte","formato":"Shopping","apertura":"2019-06","comparable":true},{"id":"L03","nombre":"Parador Ruta Norte","region":"Norte","formato":"Ruta","apertura":"2020-11","comparable":true},{"id":"L04","nombre":"Avenida Norte","region":"Norte","formato":"Calle","apertura":"2021-04","comparable":true},{"id":"L05","nombre":"Shopping Centro","region":"Centro","formato":"Shopping","apertura":"2025-11","comparable":false},{"id":"L06","nombre":"Peatonal Centro","region":"Centro","formato":"Calle","apertura":"2017-08","comparable":true},{"id":"L07","nombre":"Galería Centro","region":"Centro","formato":"Shopping","apertura":"2019-02","comparable":true},{"id":"L08","nombre":"Terminal Centro","region":"Centro","formato":"Calle","apertura":"2020-09","comparable":true},{"id":"L09","nombre":"Costanera Sur","region":"Sur","formato":"Calle","apertura":"2018-12","comparable":true},{"id":"L10","nombre":"Shopping Sur","region":"Sur","formato":"Shopping","apertura":"2021-10","comparable":true},{"id":"L11","nombre":"Parador Ruta Sur","region":"Sur","formato":"Ruta","apertura":"2022-01","comparable":true},{"id":"L12","nombre":"Barrio Sur","region":"Sur","formato":"Calle","apertura":"2023-05","comparable":true}],"ipc":[100.0,102.7,104.96,107.48,111.35,114.47,116.3,118.27,120.52,122.81,125.39,128.27,131.48,135.16,139.08,143.12,147.98,151.83,155.32,158.58,161.75,165.31,168.62,171.82],"ipc_ppto":[100.0,102.5,104.34,106.22,108.14,110.08,112.06,114.08,116.13,118.22,120.35,122.52,124.72,126.97,129.0,131.06,133.16,135.29,137.46,139.66,141.89,144.16,146.47,148.81],"infl":[2.4,2.7,2.2,2.4,3.6,2.8,1.6,1.7,1.9,1.9,2.1,2.3,2.5,2.8,2.9,2.9,3.4,2.6,2.3,2.1,2.0,2.2,2.0,1.9],"metodo_elegido":"reg_grupo","metodo_elegido_nombre":"Regresión · estacionalidad por tipo de local","modo_contribucion":"palanca","backtest":[{"id":"ingenuo","nombre":"Ingenuo estacional","desc":"El mismo mes del año anterior, en moneda constante","corto_wape_red":0.026077,"corto_sesgo_red":0.025477,"corto_wape_local":0.049305,"anual_wape_red":0.021654,"anual_sesgo_red":0.020782,"anual_wape_local":0.04298},{"id":"ingenuo_crec","nombre":"Ingenuo + crecimiento reciente","desc":"Mismo mes del año anterior x el crecimiento interanual de los últimos 3 meses (a 12 meses queda igual al ingenuo: con un año de historia no hay crecimiento que medir)","corto_wape_red":0.02184,"corto_sesgo_red":-0.000419,"corto_wape_local":0.051208,"anual_wape_red":0.021654,"anual_sesgo_red":0.020782,"anual_wape_local":0.04298},{"id":"movil","nombre":"Promedio móvil 3 meses","desc":"El promedio de los últimos 3 meses, plano","corto_wape_red":0.060104,"corto_sesgo_red":0.01852,"corto_wape_local":0.075943,"anual_wape_red":0.04814,"anual_sesgo_red":-0.003861,"anual_wape_local":0.058827},{"id":"reg_local","nombre":"Regresión · estacionalidad propia de cada local","desc":"Tendencia + 11 coeficientes de mes por local (pocos datos para tantos)","corto_wape_red":0.020081,"corto_sesgo_red":0.014316,"corto_wape_local":0.049581,"anual_wape_red":0.021654,"anual_sesgo_red":0.020782,"anual_wape_local":0.04298},{"id":"reg_red","nombre":"Regresión · estacionalidad de la red","desc":"Tendencia + un solo patrón de meses para toda la red, aplicado a cada local","corto_wape_red":0.019525,"corto_sesgo_red":0.009159,"corto_wape_local":0.044663,"anual_wape_red":0.020969,"anual_sesgo_red":0.016731,"anual_wape_local":0.0426},{"id":"reg_grupo","nombre":"Regresión · estacionalidad por tipo de local","desc":"Tendencia + un patrón de meses para locales urbanos y otro para los de ruta","corto_wape_red":0.019214,"corto_sesgo_red":0.014488,"corto_wape_local":0.039495,"anual_wape_red":0.021257,"anual_sesgo_red":0.020452,"anual_wape_local":0.037548},{"id":"ppto","nombre":"Presupuesto","desc":"Lo que se presupuestó para cada mes (en moneda constante con su propio IPC supuesto)","corto_wape_red":0.075007,"corto_sesgo_red":0.075007,"corto_wape_local":0.075236,"anual_wape_red":0.067206,"anual_sesgo_red":0.067206,"anual_wape_local":0.067455}],"backtest_contrib":[{"id":"palanca","nombre":"Ventas pronosticadas x margen variable − fijos","corto_wape_red":0.094897,"corto_sesgo_red":0.066143,"corto_wape_local":0.188334,"anual_wape_red":0.095674,"anual_sesgo_red":0.0603,"anual_wape_local":0.172055},{"id":"margen","nombre":"Ventas pronosticadas x margen promedio 12 meses","corto_wape_red":0.147839,"corto_sesgo_red":0.111265,"corto_wape_local":0.230206,"anual_wape_red":0.141346,"anual_sesgo_red":0.062264,"anual_wape_local":0.226185},{"id":"directo","nombre":"Mismo método aplicado directo a la contribución","corto_wape_red":0.110265,"corto_sesgo_red":0.090831,"corto_wape_local":0.209953,"anual_wape_red":0.101926,"anual_sesgo_red":0.040516,"anual_wape_local":0.200086},{"id":"ppto","nombre":"Presupuesto","corto_wape_red":0.27154,"corto_sesgo_red":0.27154,"corto_wape_local":0.2861,"anual_wape_red":0.223888,"anual_sesgo_red":0.223888,"anual_wape_local":0.235491}],"backtest_diseno":{"corto":{"cortes":["2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09"],"horizonte":3,"pares":24},"anual":{"corte":"2025-10","meses":["2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10"]}},"incertidumbre_ventas":{"corto":0.027511,"largo":0.033212,"sesgo":0.017235,"ruido":0.023706},"incertidumbre_contrib":{"corto":0.123459,"largo":0.140412,"sesgo":0.076323,"ruido":0.104097},"tendencia_anual_real":-0.01246,"estacionalidad":{"urbano":[1.0414,0.9783,0.9315,0.9612,0.9753,0.9784,1.0609,0.9728,0.9907,1.0121,1.0122,1.0852],"ruta":[1.2199,1.1562,0.9158,0.9251,0.8862,0.8698,1.1292,0.9262,0.9105,0.9671,1.0059,1.0883]},"series":{"red":{"v_real_c":[1569.45,1666.44,1641.07,1546.55,1469.77,1481.14,1499.61,1473.36,1648.47,1482.09,1494.99,1539.23,1686.87,1819.74,1797.46,1685.03,1522.02,1609.04,1628.39,1646.11,1813.48,1636.16,1690.33,1720.55],"v_ppto_c":[1585.02,1694.76,1671.94,1560.42,1510.08,1493.71,1502.58,1519.47,1680.97,1516.36,1533.39,1572.39,1738.62,1915.24,1887.21,1771.8,1728.65,1720.16,1741.46,1761.46,1944.42,1757.38,1777.48,1822.38],"v_real_n":[913.43,996.06,1002.48,967.43,952.5,986.76,1015.04,1014.17,1156.29,1059.34,1091.01,1149.09,1290.82,1431.47,1454.96,1403.57,1310.84,1421.84,1472.01,1519.27,1707.19,1574.17,1658.85,1720.55],"v_ppto_n":[922.49,1011.02,1015.31,964.66,950.42,956.97,979.98,1008.85,1136.14,1043.32,1074.05,1121.22,1262.02,1415.31,1416.89,1351.48,1339.7,1354.45,1393.2,1431.76,1605.71,1474.47,1515.23,1578.33],"c_real_c":[252.83,318.21,282.93,253.83,221.34,212.66,231.74,221.19,298.75,217.37,232.26,241.98,272.52,366.79,312.79,266.69,194.11,216.78,235.76,242.12,319.18,233.88,277.81,273.73],"c_ppto_c":[256.75,329.55,306.08,254.4,234.99,212.69,226.37,244.51,311.7,230.46,248.73,256.95,297.58,402.5,365.08,310.89,294.52,276.38,291.09,310.49,389.56,296.65,316.17,327.45],"c_real_n":[147.15,190.2,172.83,158.78,143.44,141.68,156.86,152.26,209.55,155.37,169.49,180.64,208.54,288.53,253.19,222.14,167.18,191.56,213.12,223.46,300.47,225.02,272.63,273.73],"c_ppto_n":[149.43,196.59,185.87,157.27,147.9,136.26,147.64,162.34,210.68,158.57,174.22,183.22,216.01,297.44,274.09,237.14,228.25,217.62,232.88,252.38,321.7,248.9,269.52,283.6],"v_pron":[1725.02,1849.44,1806.59,1697.28,1578.98,1623.8,1635.95,1635.79,1807.33,1634.74,1656.85,1697.84,1703.53,1826.4],"v_lo":[1664.2,1784.23,1742.89,1625.04,1511.77,1554.68,1566.32,1566.16,1730.4,1565.16,1586.33,1625.58,1631.02,1748.66],"v_hi":[1785.84,1914.65,1870.29,1769.52,1646.19,1692.92,1705.58,1705.41,1884.25,1704.32,1727.37,1770.11,1776.04,1904.14],"c_pron":[286.34,353.75,330.67,271.45,207.21,231.48,238.02,237.91,330.98,237.4,249.35,271.58,274.69,341.27],"c_lo":[241.03,297.78,278.35,222.6,169.92,189.82,195.19,195.1,271.42,194.68,204.48,222.71,225.26,279.85],"c_hi":[331.64,409.72,382.99,320.3,244.5,273.13,280.85,280.73,390.55,280.12,294.22,320.45,324.12,402.68],"v25":18782.887686,"v26":20323.034839,"v27":20305.066384,"c26":3212.92456,"c27":3222.002016,"rmse_v":0.03199},"L01":{"v_real_c":[137.75,152.26,144.51,138.65,126.58,131.14,127.56,126.75,146.26,130.02,132.24,139.12,140.85,145.47,146.07,138.07,121.08,133.44,135.43,135.24,145.54,131.13,130.04,132.45],"v_ppto_c":[140.13,149.26,143.75,134.45,133.36,132.26,133.93,135.6,146.98,134.8,136.48,139.55,141.27,154.18,147.79,138.25,137.13,136.03,137.75,139.47,151.2,138.68,140.41,143.6],"v_real_n":[80.17,91.01,88.28,86.73,82.03,87.37,86.34,87.25,102.59,92.94,96.51,103.86,107.78,114.43,118.24,115.01,104.28,117.92,122.42,124.82,137.01,126.16,127.62,132.45],"v_ppto_n":[81.56,89.04,87.29,83.12,83.93,84.74,87.35,90.03,99.34,92.75,95.6,99.51,102.55,113.93,110.96,105.46,106.27,107.11,110.2,113.37,124.86,116.35,119.7,124.37],"c_real_c":[22.29,30.54,25.09,21.41,15.32,17.42,17.8,14.94,26.58,17.14,20.27,23.5,23.57,30.29,27.62,23.28,14.36,20.95,21.56,26.36,25.35,18.11,20.35,18.99],"c_ppto_c":[22.0,28.5,24.13,19.71,19.97,18.22,20.08,21.91,26.13,20.04,21.9,22.55,24.43,32.71,26.73,22.06,22.2,20.58,22.36,24.13,28.81,22.42,24.2,25.05],"c_real_n":[12.97,18.25,15.33,13.39,9.93,11.6,12.05,10.28,18.64,12.25,14.79,17.54,18.04,23.83,22.36,19.39,12.37,18.51,19.49,24.33,23.87,17.42,19.97,18.99],"c_ppto_n":[12.8,17.0,14.66,12.18,12.57,11.67,13.09,14.55,17.66,13.79,15.34,16.08,17.73,24.17,20.07,16.83,17.21,16.21,17.89,19.61,23.79,18.81,20.63,21.69],"v_pron":[135.93,145.59,139.56,130.96,124.57,128.41,130.16,130.44,141.29,129.43,131.67,134.37,134.24,143.77],"v_lo":[130.92,140.22,134.42,126.14,119.98,123.68,125.37,125.64,136.08,124.66,126.82,129.42,129.29,138.47],"v_hi":[140.94,150.95,144.7,135.79,129.16,133.14,134.96,135.25,146.5,134.2,136.52,139.32,139.18,149.07],"c_pron":[22.4,27.6,24.35,19.73,16.29,18.35,19.3,19.45,25.29,18.9,20.11,21.56,21.49,26.62],"c_lo":[18.4,23.6,20.36,15.73,12.29,14.36,15.3,15.45,21.29,14.9,16.11,17.56,17.49,22.63],"c_hi":[26.4,31.6,28.35,23.73,20.28,22.35,23.29,23.44,29.28,22.9,24.1,25.56,25.49,30.62],"v25":1629.154539,"v26":1630.021928,"v27":1598.872314,"c26":266.922684,"c27":251.434023,"rmse_v":0.028753},"L02":{"v_real_c":[203.84,213.56,222.28,184.46,190.92,194.07,213.65,194.11,217.42,195.0,196.89,204.24,203.24,211.0,216.29,200.73,186.14,187.11,197.64,207.11,225.95,193.16,208.82,208.28],"v_ppto_c":[208.54,222.13,213.93,200.09,198.46,196.83,199.31,201.81,218.75,200.61,203.11,207.69,210.24,229.47,219.95,205.75,204.09,202.43,205.0,207.57,225.02,206.38,208.96,213.71],"v_real_n":[118.64,127.65,135.78,115.39,123.73,129.29,144.61,133.61,152.51,139.38,143.68,152.47,155.53,165.98,175.08,167.2,160.31,165.34,178.66,191.15,212.71,185.84,204.93,208.28],"v_ppto_n":[121.37,132.52,129.91,123.7,124.9,126.1,129.99,133.99,147.85,138.03,142.26,148.1,152.61,169.57,165.14,156.94,158.17,159.39,164.0,168.72,185.82,173.15,178.13,185.09],"c_real_c":[42.51,49.21,51.72,34.44,37.83,39.24,47.9,41.28,50.7,40.54,42.11,41.93,45.04,50.47,48.81,41.94,38.89,36.04,39.49,49.53,54.15,41.31,49.91,46.24],"c_ppto_c":[45.5,53.42,48.24,42.27,42.32,39.88,41.97,44.06,50.79,42.7,44.79,45.42,47.54,57.89,51.56,45.31,45.25,42.98,45.01,47.04,54.21,45.77,47.79,48.7],"c_real_n":[24.74,29.42,31.59,21.55,24.51,26.14,32.42,28.42,35.57,28.98,30.73,31.3,34.46,39.7,39.51,34.94,33.49,31.85,35.7,45.72,50.98,39.74,48.98,46.24],"c_ppto_n":[26.48,31.87,29.29,26.13,26.64,25.55,27.38,29.25,34.33,29.38,31.37,32.39,34.51,42.78,38.71,34.56,35.07,33.84,36.01,38.23,44.77,38.4,40.74,42.18],"v_pron":[202.83,217.24,208.25,195.42,185.88,191.61,194.23,194.64,210.83,193.13,196.48,200.5,200.31,214.54],"v_lo":[191.91,205.54,197.04,184.9,175.87,181.29,183.77,184.16,199.48,182.73,185.9,189.71,189.52,202.98],"v_hi":[213.75,228.94,219.46,205.95,195.89,201.93,204.68,205.12,222.19,203.53,207.05,211.3,211.09,226.09],"c_pron":[44.72,51.18,47.15,41.4,37.13,39.69,40.87,41.05,48.31,40.37,41.87,43.68,43.59,49.97],"c_lo":[38.2,44.66,40.63,34.88,30.6,33.17,34.34,34.53,41.78,33.85,35.35,37.16,37.07,43.44],"c_hi":[51.25,57.71,53.68,47.93,43.65,46.22,47.39,47.58,54.83,46.9,48.4,50.2,50.12,56.49],"v25":2427.267721,"v26":2451.310761,"v27":2385.817712,"c26":542.228462,"c27":515.094805,"rmse_v":0.042014},"L03":{"v_real_c":[105.88,109.51,124.52,120.19,97.54,93.96,94.88,89.04,121.51,92.96,91.47,99.13,103.87,110.32,132.12,117.74,65.73,72.79,68.15,68.7,85.76,70.55,91.84,98.35],"v_ppto_c":[103.98,114.15,130.86,120.64,99.87,96.93,92.91,93.1,118.76,95.64,95.85,100.32,104.82,117.91,134.54,124.05,102.7,99.69,95.55,95.77,122.17,98.4,98.61,103.22],"v_real_n":[61.62,65.46,76.07,75.18,63.21,62.6,64.22,61.29,85.23,66.45,66.75,74.01,79.48,86.78,106.95,98.08,56.61,64.32,61.61,63.4,80.74,67.88,90.13,98.35],"v_ppto_n":[60.52,68.1,79.47,74.58,62.86,62.1,60.6,61.82,80.27,65.8,67.14,71.54,76.08,87.13,101.01,94.62,79.59,78.49,76.45,77.85,100.89,82.56,84.06,89.4],"c_real_c":[8.96,10.65,19.52,18.17,6.26,2.41,4.43,0.41,17.2,2.0,1.3,4.48,8.55,13.74,23.46,17.06,-11.46,-9.25,-10.42,-10.23,-2.83,-11.48,3.39,5.3],"c_ppto_c":[7.32,14.21,22.79,17.68,6.51,3.8,2.25,3.1,15.93,3.41,4.28,5.84,9.16,17.42,25.07,19.72,8.12,5.5,3.79,4.56,18.04,5.06,5.84,7.59],"c_real_n":[5.22,6.36,11.93,11.37,4.06,1.61,3.0,0.28,12.07,1.43,0.95,3.35,6.54,10.8,18.99,14.21,-9.87,-8.17,-9.42,-9.44,-2.66,-11.04,3.33,5.3],"c_ppto_n":[4.26,8.48,13.84,10.93,4.1,2.44,1.47,2.06,10.77,2.35,3.0,4.16,6.65,12.87,18.82,15.04,6.3,4.33,3.03,3.71,14.89,4.24,4.98,6.57],"v_pron":[101.51,109.7,122.84,116.3,92.03,92.86,88.87,87.13,112.99,92.58,90.92,96.47,100.24,108.33],"v_lo":[64.56,69.77,78.13,73.97,58.53,59.06,56.52,55.41,71.86,58.88,57.83,61.35,63.75,68.9],"v_hi":[138.46,149.63,167.56,158.64,125.53,126.66,121.22,118.84,154.12,126.29,124.02,131.59,136.73,147.77],"c_pron":[7.44,12.0,19.31,15.67,2.17,2.63,0.42,-0.55,13.83,2.48,1.56,4.64,6.74,11.24],"c_lo":[-7.29,-2.73,4.58,0.94,-12.56,-12.09,-14.31,-15.28,-0.9,-12.25,-13.17,-10.09,-7.99,-3.49],"c_hi":[22.17,26.72,34.03,30.4,16.9,17.36,15.14,14.17,28.56,17.21,16.28,19.37,21.47,25.96],"v25":1239.397772,"v26":1082.962179,"v27":1201.576085,"c26":12.978346,"c27":80.122259,"rmse_v":0.28403},"L04":{"v_real_c":[130.27,140.48,128.73,119.27,117.53,119.3,123.71,123.07,122.39,118.31,117.62,127.18,118.62,136.22,124.56,113.46,111.67,120.45,117.51,119.15,126.0,117.71,123.17,128.46],"v_ppto_c":[126.11,134.34,129.37,121.01,120.01,119.04,120.54,122.03,132.28,121.32,122.83,125.6,127.14,138.77,133.0,124.42,123.43,122.42,123.97,125.52,136.07,124.8,126.36,129.24],"v_real_n":[75.82,83.97,78.64,74.61,76.17,79.48,83.74,84.71,85.85,84.57,85.84,94.94,90.77,107.16,100.83,94.51,96.18,106.44,106.22,109.97,118.62,113.25,120.88,128.46],"v_ppto_n":[73.4,80.14,78.56,74.81,75.53,76.26,78.61,81.02,89.41,83.47,86.04,89.56,92.28,102.55,99.86,94.9,95.65,96.39,99.18,102.03,112.37,104.71,107.72,111.94],"c_real_c":[16.65,24.87,15.13,11.56,12.71,11.46,15.15,15.98,13.67,11.51,11.28,15.15,12.34,24.14,12.7,9.49,9.41,13.23,11.38,14.63,15.58,13.37,16.07,18.36],"c_ppto_c":[14.43,20.42,16.36,12.47,12.8,11.12,12.87,14.61,18.18,12.8,14.55,15.04,16.81,24.36,18.75,14.62,14.84,13.28,14.96,16.63,20.63,14.96,16.65,17.32],"c_real_n":[9.69,14.86,9.24,7.23,8.23,7.64,10.26,11.0,9.59,8.23,8.23,11.31,9.44,18.99,10.28,7.91,8.11,11.69,10.29,13.5,14.67,12.86,15.77,18.36],"c_ppto_n":[8.4,12.18,9.94,7.71,8.06,7.12,8.4,9.7,12.29,8.81,10.19,10.72,12.2,18.0,14.07,11.15,11.5,10.45,11.97,13.52,17.04,12.55,14.19,15.0],"v_pron":[122.52,131.22,125.79,118.04,112.28,115.74,117.32,117.57,127.35,116.66,118.68,121.11,120.99,129.59],"v_lo":[117.0,125.32,120.13,112.73,107.23,110.53,112.04,112.28,121.62,111.41,113.34,115.66,115.55,123.75],"v_hi":[128.03,137.13,131.45,123.36,117.33,120.95,122.6,122.86,133.08,121.91,124.02,126.56,126.44,135.42],"c_pron":[14.85,19.77,16.7,12.32,9.06,11.02,11.91,12.05,17.58,11.54,12.68,14.05,13.99,18.84],"c_lo":[11.26,16.18,13.11,8.73,5.47,7.43,8.32,8.46,13.99,7.95,9.09,10.46,10.4,15.25],"c_hi":[18.44,23.36,20.29,15.91,12.66,14.61,15.5,15.64,21.17,15.13,16.27,17.64,17.58,22.43],"v25":1471.951888,"v26":1455.882373,"v27":1441.123302,"c26":168.842526,"c27":161.750135,"rmse_v":0.03512},"L05":{"v_real_c":[null,null,null,null,null,null,null,null,null,null,null,null,140.58,148.94,163.23,161.35,157.35,183.53,184.12,195.49,205.56,188.65,191.8,199.31],"v_ppto_c":[null,null,null,null,null,null,null,null,null,null,null,null,140.76,164.61,168.31,167.28,175.7,183.95,196.08,198.54,215.24,197.4,199.88,204.42],"v_real_n":[null,null,null,null,null,null,null,null,null,null,null,null,107.58,117.16,132.12,134.4,135.51,162.18,166.44,180.43,193.52,181.5,188.23,199.31],"v_ppto_n":[null,null,null,null,null,null,null,null,null,null,null,null,102.18,121.64,126.37,127.6,136.16,144.84,156.87,161.38,177.75,165.62,170.39,177.04],"c_real_c":[null,null,null,null,null,null,null,null,null,null,null,null,18.17,23.3,27.75,29.12,28.13,37.82,33.8,42.27,44.26,36.91,39.62,41.91],"c_ppto_c":[null,null,null,null,null,null,null,null,null,null,null,null,17.49,30.04,30.39,30.57,35.41,38.18,40.1,42.07,48.88,40.82,42.8,43.6],"c_real_n":[null,null,null,null,null,null,null,null,null,null,null,null,13.9,18.33,22.46,24.26,24.23,33.42,30.55,39.01,41.67,35.51,38.88,41.91],"c_ppto_n":[null,null,null,null,null,null,null,null,null,null,null,null,12.7,22.2,22.82,23.32,27.44,30.06,32.08,34.2,40.36,34.25,36.48,37.76],"v_pron":[196.08,210.01,201.31,188.92,179.69,185.23,187.76,188.16,203.81,186.7,189.93,193.83,193.63,207.39],"v_lo":[187.25,200.56,192.25,180.41,171.61,176.89,179.31,179.69,194.64,178.29,181.38,185.1,184.92,198.06],"v_hi":[204.9,219.46,210.38,197.42,187.78,193.57,196.21,196.63,212.99,195.1,198.48,202.55,202.35,216.73],"c_pron":[40.72,47.4,43.23,37.28,32.86,35.51,36.73,36.92,44.43,36.22,37.77,39.64,39.55,46.15],"c_lo":[35.03,41.71,37.54,31.59,27.17,29.82,31.04,31.23,38.74,30.53,32.08,33.95,33.86,40.46],"c_hi":[46.41,53.09,48.92,42.97,38.54,41.2,42.41,42.61,50.12,41.9,43.46,45.33,45.23,51.83],"v25":289.52073,"v26":2236.465877,"v27":2306.368534,"c26":449.713405,"c27":466.268206,"rmse_v":0.03512},"L06":{"v_real_c":[163.43,178.64,162.88,161.6,153.48,154.26,158.41,153.16,176.68,152.92,165.88,164.9,162.87,173.83,169.01,158.49,148.19,158.97,165.71,153.94,168.34,159.65,157.18,162.42],"v_ppto_c":[168.16,179.12,172.5,161.34,160.02,158.71,160.71,162.72,176.38,161.76,163.77,167.47,169.52,185.02,177.35,165.89,164.57,163.23,165.3,167.37,181.44,166.4,168.5,172.33],"v_real_n":[95.12,106.78,99.5,101.09,99.46,102.77,107.23,105.42,123.93,109.3,121.05,123.1,124.63,136.74,136.81,132.02,127.63,140.48,149.8,142.08,158.47,153.61,154.26,162.42],"v_ppto_n":[97.87,106.86,104.75,99.74,100.71,101.68,104.81,108.04,119.21,111.3,114.71,119.42,123.05,136.72,133.15,126.54,127.54,128.53,132.24,136.04,149.83,139.61,143.64,149.25],"c_real_c":[35.64,45.28,33.41,35.67,33.59,31.51,34.38,31.26,42.6,30.13,38.64,35.5,36.0,42.87,39.34,33.6,28.94,34.0,39.84,32.45,40.88,35.46,33.3,35.76],"c_ppto_c":[37.6,45.15,40.15,34.65,34.79,32.92,34.96,36.99,42.52,35.02,37.07,38.08,40.14,49.92,43.2,37.42,37.45,35.7,37.67,39.64,45.66,37.83,39.82,41.03],"c_real_n":[20.74,27.06,20.41,22.31,21.77,20.99,23.27,21.52,29.88,21.54,28.2,26.5,27.55,33.72,31.84,27.99,24.93,30.04,36.02,29.95,38.48,34.11,32.68,35.76],"c_ppto_n":[21.89,26.94,24.38,21.42,21.9,21.09,22.8,24.56,28.74,24.1,25.96,27.15,29.14,36.89,32.44,28.55,29.02,28.11,30.14,32.22,37.71,31.74,33.94,35.54],"v_pron":[161.68,173.17,166.0,155.78,148.17,152.73,154.82,155.15,168.06,153.95,156.61,159.83,159.67,171.01],"v_lo":[156.74,167.87,160.92,151.01,143.64,148.06,150.08,150.41,162.92,149.24,151.82,154.94,154.78,165.78],"v_hi":[166.63,178.46,171.08,160.54,152.7,157.41,159.56,159.9,173.2,158.65,161.4,164.71,164.55,176.24],"c_pron":[36.11,42.51,38.51,32.82,28.58,31.13,32.29,32.47,39.66,31.8,33.29,35.07,34.99,41.3],"c_lo":[32.76,39.16,35.17,29.48,25.24,27.78,28.94,29.13,36.32,28.46,29.94,31.73,31.64,37.96],"c_hi":[39.45,45.85,41.86,36.16,31.93,34.47,35.63,35.82,43.0,35.14,36.63,38.42,38.33,44.65],"v25":1940.860127,"v26":1936.767285,"v27":1901.768953,"c26":432.182361,"c27":411.914377,"rmse_v":0.023867},"L07":{"v_real_c":[184.91,197.41,183.98,175.22,183.32,175.31,171.22,177.69,202.36,182.4,179.27,173.37,176.79,202.49,178.58,164.26,159.94,160.54,167.1,169.19,184.42,175.69,172.14,174.59],"v_ppto_c":[190.42,202.82,195.32,182.69,181.19,179.72,181.98,184.25,199.73,183.17,185.44,189.63,191.95,209.5,200.82,187.85,186.35,184.83,187.16,189.51,205.45,188.43,190.79,195.13],"v_real_n":[107.62,118.0,112.39,109.61,118.8,116.8,115.89,122.31,141.94,130.37,130.82,129.43,135.28,159.29,144.55,136.82,137.75,141.87,151.06,156.16,173.61,169.04,168.94,174.59],"v_ppto_n":[110.83,120.99,118.61,112.94,114.04,115.14,118.69,122.34,135.0,126.03,129.89,135.22,139.33,154.82,150.77,143.29,144.42,145.53,149.73,154.04,169.66,158.09,162.64,169.0],"c_real_c":[35.89,41.34,32.89,32.93,37.19,29.53,30.22,31.26,42.36,34.59,33.53,29.28,29.83,48.1,24.27,20.74,19.8,16.19,21.27,24.74,27.88,27.19,26.63,21.73],"c_ppto_c":[36.79,44.12,39.29,33.92,34.04,31.67,33.66,35.63,41.65,34.33,36.31,36.75,38.76,48.28,42.36,36.72,36.73,34.54,36.45,38.37,44.8,37.15,39.07,39.77],"c_real_n":[20.89,24.71,20.09,20.6,24.1,19.67,20.46,21.52,29.71,24.73,24.47,21.86,22.83,37.84,19.64,17.27,17.05,14.3,19.23,22.83,26.25,26.16,26.14,21.73],"c_ppto_n":[21.41,26.32,23.86,20.97,21.42,20.29,21.95,23.66,28.15,23.62,25.43,26.2,28.13,35.68,31.8,28.01,28.47,27.19,29.16,31.19,36.99,31.17,33.31,34.45],"v_pron":[177.66,190.28,182.41,171.17,162.82,167.83,170.12,170.49,184.67,169.16,172.09,175.62,175.45,187.91],"v_lo":[165.8,177.58,170.23,159.74,151.95,156.63,158.76,159.11,172.34,157.87,160.6,163.9,163.73,175.37],"v_hi":[189.52,202.99,194.59,182.6,173.69,179.04,181.48,181.87,197.0,180.46,183.58,187.35,187.16,200.46],"c_pron":[28.16,36.23,31.19,24.01,18.67,21.87,23.34,23.57,32.64,22.72,24.6,26.86,26.74,34.71],"c_lo":[17.02,25.09,20.05,12.87,7.52,10.73,12.2,12.43,21.5,11.58,13.46,15.71,15.6,23.57],"c_hi":[39.3,47.37,42.34,35.15,29.81,33.02,34.48,34.72,43.78,33.87,35.74,38.0,37.89,45.86],"v25":2183.408386,"v26":2074.424144,"v27":2089.755849,"c26":294.827078,"c27":310.927352,"rmse_v":0.052098},"L08":{"v_real_c":[144.76,150.67,149.05,138.08,138.69,134.54,140.47,141.14,148.23,138.12,140.98,146.34,141.95,155.55,152.48,139.84,125.4,136.46,141.13,144.79,148.88,135.8,137.45,141.23],"v_ppto_c":[147.13,156.73,150.94,141.16,140.02,138.87,140.62,142.38,154.34,141.53,143.31,146.54,148.34,161.89,155.18,145.16,143.99,142.82,144.63,146.45,158.76,145.61,147.44,150.78],"v_real_n":[84.25,90.06,91.05,86.38,89.88,89.63,95.08,97.15,103.98,98.72,102.89,109.25,108.62,122.36,123.42,116.48,108.0,120.59,127.57,133.63,140.15,130.65,134.89,141.23],"v_ppto_n":[85.63,93.5,91.66,87.27,88.12,88.97,91.71,94.53,104.31,97.38,100.38,104.49,107.67,119.63,116.5,110.73,111.59,112.46,115.71,119.04,131.1,122.17,125.69,130.59],"c_real_c":[23.6,28.84,27.82,24.38,23.43,20.75,24.43,26.61,27.95,24.48,24.73,26.63,26.11,36.19,30.05,22.84,16.86,20.58,25.65,27.18,29.3,21.0,23.65,26.72],"c_ppto_c":[26.26,33.03,28.51,23.8,24.04,22.26,24.16,26.05,30.6,24.15,26.06,26.81,28.73,37.39,31.22,26.28,26.39,24.73,26.57,28.39,33.4,26.65,28.49,29.42],"c_real_n":[13.73,17.24,16.99,15.25,15.18,13.82,16.53,18.31,19.6,17.5,18.04,19.88,19.98,28.47,24.32,19.03,14.52,18.18,23.19,25.08,27.59,20.21,23.21,26.72],"c_ppto_n":[15.28,19.7,17.31,14.71,15.13,14.26,15.76,17.3,20.68,16.62,18.25,19.11,20.85,27.63,23.44,20.04,20.45,19.48,21.26,23.08,27.58,22.36,24.29,25.48],"v_pron":[142.01,152.1,145.8,136.82,130.14,134.15,135.98,136.27,147.61,135.21,137.56,140.38,140.24,150.2],"v_lo":[136.31,146.0,139.95,131.33,124.92,128.77,130.53,130.81,141.69,129.79,132.04,134.75,134.61,144.18],"v_hi":[147.7,158.2,151.65,142.31,135.36,139.53,141.43,141.74,153.53,140.64,143.07,146.01,145.86,156.22],"c_pron":[25.67,31.77,27.96,22.53,18.49,20.91,22.02,22.2,29.06,21.56,22.98,24.68,24.6,30.63],"c_lo":[22.18,28.29,24.48,19.05,15.0,17.43,18.54,18.72,25.57,18.07,19.49,21.2,21.11,27.14],"c_hi":[29.15,35.26,31.45,26.02,21.97,24.4,25.51,25.68,32.54,25.04,26.46,28.17,28.08,34.11],"v25":1713.146646,"v26":1697.551805,"v27":1670.356018,"c26":301.270395,"c27":287.617247,"rmse_v":0.031294},"L09":{"v_real_c":[133.76,142.14,131.26,132.58,120.69,127.86,119.52,128.95,133.92,127.85,125.61,130.78,129.85,144.92,129.9,126.28,117.88,120.3,129.58,126.52,137.03,122.55,128.88,134.96],"v_ppto_c":[133.13,141.79,136.57,127.72,126.68,125.65,127.23,128.81,139.64,128.05,129.66,132.58,134.2,146.48,140.4,131.33,130.29,129.23,130.86,132.5,143.64,131.75,133.39,136.43],"v_real_n":[77.85,84.96,80.19,82.93,78.21,85.18,80.9,88.76,93.93,91.38,91.67,97.63,99.36,114.0,105.15,105.18,101.52,106.3,117.14,116.77,129.0,117.91,126.48,134.96],"v_ppto_n":[77.48,84.59,82.93,78.96,79.73,80.5,82.98,85.53,94.38,88.1,90.82,94.54,97.41,108.25,105.41,100.17,100.97,101.76,104.69,107.7,118.62,110.54,113.71,118.16],"c_real_c":[17.95,23.78,15.9,17.44,13.49,16.71,9.91,17.95,18.05,16.06,15.28,18.45,17.15,28.2,15.93,14.87,11.69,12.93,19.52,17.03,20.38,12.54,17.99,20.07],"c_ppto_c":[17.74,23.97,19.77,15.6,15.9,14.18,15.98,17.77,21.67,15.92,17.73,18.3,20.12,28.04,22.24,17.83,18.02,16.43,18.16,19.88,24.22,18.19,19.92,20.68],"c_real_n":[10.45,14.21,9.71,10.91,8.74,11.14,6.71,12.35,12.66,11.48,11.15,13.77,13.13,22.19,12.89,12.39,10.07,11.43,17.64,15.71,19.18,12.06,17.66,20.07],"c_ppto_n":[10.32,14.3,12.01,9.64,10.0,9.09,10.42,11.8,14.65,10.96,12.42,13.05,14.6,20.72,16.7,13.6,13.97,12.94,14.53,16.16,20.0,15.26,16.98,17.91],"v_pron":[129.14,138.31,132.59,124.42,118.35,121.99,123.66,123.93,134.23,122.96,125.09,127.66,127.53,136.59],"v_lo":[124.09,132.91,127.41,119.56,113.72,117.23,118.83,119.08,128.99,118.15,120.2,122.67,122.55,131.25],"v_hi":[134.19,143.72,137.77,129.29,122.98,126.76,128.5,128.77,139.48,127.77,129.98,132.65,132.52,141.93],"c_pron":[17.41,22.72,19.4,14.68,11.16,13.27,14.24,14.39,20.36,13.83,15.07,16.55,16.48,21.72],"c_lo":[13.96,19.27,15.95,11.23,7.71,9.82,10.79,10.94,16.91,10.38,11.62,13.1,13.03,18.27],"c_hi":[20.86,26.17,22.85,18.13,14.61,16.72,17.69,17.84,23.81,17.28,18.52,20.0,19.93,25.17],"v25":1553.770805,"v26":1541.326565,"v27":1519.014436,"c26":203.064534,"c27":191.150561,"rmse_v":0.030505},"L10":{"v_real_c":[182.67,187.09,185.27,177.34,168.33,175.33,177.6,170.29,183.55,172.31,170.38,170.99,182.89,187.72,183.57,172.53,167.01,165.05,158.41,157.38,186.85,167.27,177.72,168.69],"v_ppto_c":[181.35,193.17,186.03,173.99,172.58,171.17,173.32,175.47,190.22,174.44,176.62,180.6,182.81,199.54,191.25,178.91,177.47,176.04,178.26,180.5,195.67,179.45,181.71,185.84],"v_real_n":[106.32,111.83,113.18,110.94,109.09,116.81,120.21,117.22,128.75,123.16,124.34,127.65,139.95,147.67,148.59,143.71,143.84,145.85,143.2,145.26,175.9,160.93,174.41,168.69],"v_ppto_n":[105.54,115.24,112.97,107.56,108.62,109.66,113.04,116.5,128.56,120.02,123.71,128.78,132.7,147.45,143.59,136.47,137.54,138.61,142.61,146.72,161.59,150.56,154.9,160.95],"c_real_c":[31.62,36.3,30.37,28.82,27.33,28.33,33.13,27.7,32.76,28.87,27.83,28.01,33.73,35.34,34.54,27.71,26.41,22.08,21.3,4.28,35.15,25.68,32.11,26.49],"c_ppto_c":[31.82,38.87,34.21,29.14,29.29,26.96,28.89,30.8,36.45,29.52,31.45,31.79,33.75,42.86,37.13,31.8,31.85,29.69,31.55,33.41,39.46,32.21,34.08,34.67],"c_real_n":[18.4,21.7,18.55,18.03,17.71,18.88,22.43,19.07,22.98,20.63,20.31,20.91,25.81,27.8,27.96,23.08,22.74,19.51,19.25,3.95,33.09,24.71,31.51,26.49],"c_ppto_n":[18.52,23.19,20.77,18.01,18.44,17.27,18.84,20.45,24.64,20.31,22.03,22.67,24.5,31.67,27.88,24.26,24.68,23.38,25.24,27.16,32.59,27.03,29.05,30.03],"v_pron":[174.61,187.02,179.28,168.23,160.02,164.95,167.2,167.56,181.5,166.26,169.14,172.61,172.44,184.69],"v_lo":[164.0,175.65,168.38,158.01,150.3,154.93,157.04,157.38,170.47,156.15,158.86,162.12,161.96,173.46],"v_hi":[185.22,198.38,190.17,178.46,169.75,174.98,177.36,177.75,192.53,176.36,179.42,183.1,182.92,195.91],"c_pron":[29.28,35.71,31.7,25.98,21.72,24.28,25.44,25.63,32.85,24.95,26.45,28.24,28.15,34.5],"c_lo":[18.14,24.57,20.56,14.84,10.58,13.14,14.3,14.49,21.71,13.81,15.31,17.1,17.01,23.36],"c_hi":[40.42,46.85,42.84,37.12,32.86,35.41,36.58,36.77,43.99,36.09,37.59,39.38,39.29,45.64],"v25":2122.011295,"v26":2066.12096,"v27":2053.883187,"c26":320.728955,"c27":329.889053,"rmse_v":0.04742},"L11":{"v_real_c":[92.22,99.2,110.42,107.07,88.67,88.1,83.69,79.67,103.31,85.94,86.5,92.59,92.64,106.94,110.94,106.85,81.4,84.55,80.44,81.48,105.33,86.81,83.23,84.9],"v_ppto_c":[93.58,102.73,117.78,108.58,89.89,87.24,83.63,83.81,106.88,86.08,86.26,90.29,94.34,106.11,121.09,111.66,92.44,89.71,86.0,86.2,109.95,88.56,88.75,92.91],"v_real_n":[53.67,59.29,67.45,66.98,57.47,58.69,56.65,54.84,72.46,61.43,63.13,69.12,70.89,84.12,89.8,89.0,70.11,74.71,72.71,75.21,99.16,83.52,81.68,84.9],"v_ppto_n":[54.46,61.28,71.53,67.12,56.58,55.89,54.54,55.64,72.24,59.22,60.42,64.38,68.48,78.41,90.91,85.17,71.64,70.64,68.8,70.07,90.8,74.3,75.65,80.47],"c_real_c":[-0.34,5.84,10.16,9.91,0.15,-0.94,-2.47,-4.36,7.1,-2.74,-0.76,1.39,3.46,11.48,10.91,11.31,-2.61,-2.57,-2.73,-3.39,9.23,-1.26,-1.72,-3.33],"c_ppto_c":[1.59,7.9,15.52,11.0,1.03,-1.51,-2.84,-1.99,9.35,-1.83,-0.98,0.32,3.4,10.89,17.6,12.85,2.48,0.02,-1.45,-0.68,11.27,-0.34,0.43,1.93],"c_real_n":[-0.2,3.49,6.21,6.2,0.09,-0.62,-1.67,-3.0,4.98,-1.96,-0.56,1.04,2.65,9.03,8.83,9.42,-2.25,-2.27,-2.46,-3.13,8.69,-1.21,-1.69,-3.33],"c_ppto_n":[0.92,4.71,9.43,6.8,0.65,-0.97,-1.85,-1.32,6.32,-1.26,-0.69,0.23,2.47,8.05,13.21,9.8,1.92,0.02,-1.16,-0.55,9.31,-0.28,0.37,1.67],"v_pron":[91.97,99.39,111.3,105.37,83.38,84.13,80.52,78.94,102.37,83.88,82.38,87.4,90.82,98.15],"v_lo":[87.01,94.03,105.3,99.69,78.88,79.6,76.18,74.68,96.86,79.36,77.94,82.69,85.92,92.86],"v_hi":[96.92,104.75,117.3,111.05,87.87,88.67,84.86,83.19,107.89,88.4,86.82,92.11,95.71,103.44],"c_pron":[2.31,6.28,12.65,9.48,-2.28,-1.87,-3.81,-4.65,7.88,-2.01,-2.81,-0.13,1.7,5.62],"c_lo":[-0.49,3.48,9.85,6.68,-5.08,-4.67,-6.61,-7.45,5.07,-4.81,-5.61,-2.93,-1.1,2.82],"c_hi":[5.11,9.08,15.45,12.28,0.52,0.93,-1.01,-1.85,10.68,0.79,-0.01,2.67,4.5,8.42],"v25":1125.550863,"v26":1097.290128,"v27":1088.640941,"c26":22.441298,"c27":19.765985,"rmse_v":0.042057},"L12":{"v_real_c":[89.96,95.45,98.17,92.08,84.01,87.26,88.88,89.51,92.85,86.26,88.15,90.6,92.72,96.35,90.71,85.43,80.22,85.84,83.16,87.1,93.81,87.19,88.05,86.9],"v_ppto_c":[92.49,98.51,94.88,88.74,88.02,87.29,88.4,89.49,97.01,88.97,90.08,92.11,93.23,101.76,97.54,91.25,90.5,89.78,90.9,92.05,99.79,91.53,92.67,94.78],"v_real_n":[52.36,57.05,59.97,57.6,54.44,58.14,60.16,61.61,65.13,61.66,64.33,67.63,70.95,75.79,73.43,71.16,69.09,75.86,75.17,80.39,88.31,83.88,86.41,86.9],"v_ppto_n":[53.83,58.77,57.62,54.86,55.4,55.92,57.65,59.41,65.57,61.22,63.09,65.68,67.68,75.2,73.23,69.6,70.14,70.69,72.72,74.82,82.41,76.8,79.0,82.09],"c_real_c":[18.06,21.57,20.91,19.1,14.04,16.23,16.86,18.16,19.78,14.78,18.04,17.65,18.58,22.66,17.41,14.72,13.69,14.8,15.1,17.27,19.84,15.06,16.51,15.49],"c_ppto_c":[15.7,19.95,17.11,14.16,14.31,13.2,14.39,15.57,18.42,14.38,15.57,16.05,17.26,22.7,18.81,15.7,15.77,14.75,15.89,17.04,20.18,15.94,17.09,17.69],"c_real_n":[10.51,12.9,12.77,11.95,9.1,10.81,11.41,12.5,13.87,10.57,13.17,13.17,14.22,17.83,14.09,12.26,11.79,13.08,13.65,15.94,18.68,14.49,16.2,15.49],"c_ppto_n":[9.14,11.9,10.39,8.75,9.0,8.45,9.39,10.34,12.45,9.89,10.91,11.45,12.53,16.78,14.13,11.98,12.22,11.61,12.72,13.85,16.67,13.37,14.57,15.32],"v_pron":[89.09,95.42,91.47,85.83,81.64,84.16,85.31,85.49,92.6,84.83,86.3,88.06,87.98,94.23],"v_lo":[85.35,91.41,87.63,82.23,78.22,80.62,81.73,81.9,88.71,81.26,82.67,84.37,84.28,90.27],"v_hi":[92.83,99.42,95.31,89.44,85.07,87.69,88.89,89.08,96.49,88.39,89.92,91.76,91.67,98.18],"c_pron":[17.27,20.59,18.51,15.56,13.35,14.68,15.28,15.38,19.11,15.03,15.8,16.73,16.68,19.97],"c_lo":[15.49,18.81,16.73,13.78,11.57,12.9,13.5,13.6,17.33,13.25,14.02,14.95,14.9,18.19],"c_hi":[19.05,22.37,20.3,17.34,15.13,16.46,17.06,17.16,20.89,16.81,17.58,18.51,18.46,21.75],"v25":1086.846915,"v26":1052.910832,"v27":1047.889053,"c26":197.724517,"c27":196.068013,"rmse_v":0.032758}},"resumen":{"real26_V_ene_oct":15243252266.0,"real26_C_ene_oct":2342497482.0,"novdic_V":3683680304.895836,"novdic_V_i":[3570176876.462552,3797183733.32912],"novdic_C":660105418.457348,"novdic_C_i":[570401091.616824,749809745.297872],"cierre26_V":18926932570.895836,"cierre26_C":3002602900.457348,"cierre26_V_i":[18813429142.46255,19040435999.32912],"cierre26_C_i":[2912898573.616824,3092307227.297872],"ppto26_V":17902374590.862213,"ppto26_C":3310706315.378805,"ppto_novdic_V":3441144763.862213,"ppto_novdic_C":744627334.378805,"v26_const":20323034839.278446,"c26_const":3212924559.930826,"v27_const":20305066384.08427,"v27_const_i":[19822499090.297813,20787633677.870728],"c27_const":3222002015.975646,"c27_const_i":[2883291109.969451,3560712921.981841],"v25_const":18782887686.270283,"v26_const_mismos":18086568962.11638,"v27_const_mismos":17998697850.174835,"sesgo_ppto_nominal_12m":-0.043347,"sesgo_ppto_constante_12m":0.067206,"infl_ultimos_12m":0.339499,"infl_supuesta_ppto_12m":0.214577,"sesgo_ppto_contrib_nominal_12m":0.10116,"locales_sin_señal":["L02","L04","L06","L08","L11","L12"],"tickets_yoy":0.003196,"ticket_real_yoy":-0.010445,"l07_margen_2025":0.188569,"l07_margen_2027":0.148786,"l07_valor_2027":83136063.695468},"escenarios":[{"id":"bajo","infl_mensual":1.6,"infl_anual":21.0,"ventas_2026":18904970637.421318,"ventas_2027":23286917035.843033,"contrib_2027":3700459872.395432,"crec_nominal":0.231788,"crec_real":-0.000884,"precio_pp":23.28781,"efecto_precio":0.232878,"factor":[1.016,1.032256,1.048772,1.065552,1.082601,1.099923,1.117522,1.135402,1.153568,1.172026,1.190778,1.20983,1.229188,1.248855],"ventas_2027_i":[22733483507.380165,23840350564.3059],"contrib_2027_i":[3311451389.531683,4089468355.259181]},{"id":"base","infl_mensual":2.0,"infl_anual":26.8,"ventas_2026":18926932570.895836,"ventas_2027":24101722757.131516,"contrib_2027":3831391495.761524,"crec_nominal":0.273409,"crec_real":-0.000884,"precio_pp":27.453568,"efecto_precio":0.274536,"factor":[1.02,1.0404,1.061208,1.082432,1.104081,1.126162,1.148686,1.171659,1.195093,1.218994,1.243374,1.268242,1.293607,1.319479],"ventas_2027_i":[23528924672.82597,24674520841.43706],"contrib_2027_i":[3428618909.537411,4234164081.985637]},{"id":"alto","infl_mensual":2.5,"infl_anual":34.5,"ventas_2026":18954468212.585457,"ventas_2027":25162265346.31496,"contrib_2027":4001924880.867786,"crec_nominal":0.327511,"crec_real":-0.000884,"precio_pp":32.868576,"efecto_precio":0.328686,"factor":[1.025,1.050625,1.076891,1.103813,1.131408,1.159693,1.188686,1.218403,1.248863,1.280085,1.312087,1.344889,1.378511,1.412974],"ventas_2027_i":[24564262559.029045,25760268133.600876],"contrib_2027_i":[3581225081.349812,4422624680.38576]}],"bandas":{"ventas":{"centro":0.0,"sd":3.632,"sd_clasico":6.5,"locales":[{"local":"L01","valores":[2.59,-5.2,2.0,1.62,0.16,5.34,10.06,8.59,-1.52,1.8,-1.56,-3.45],"z":[0.71,-1.43,0.55,0.45,0.04,1.47,2.77,2.36,-0.42,0.49,-0.43,-0.95],"reglas":[[],[],[],[],[],[],[],[2],[],[],[],[]],"fuera_2":2,"señal":true},{"local":"L02","valores":[0.05,-1.94,-1.78,10.86,2.0,0.0,-3.6,8.58,2.89,0.0,6.17,3.33],"z":[0.01,-0.53,-0.49,2.99,0.55,0.0,-0.99,2.36,0.8,0.0,1.7,0.92],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":2,"señal":false},{"local":"L03","valores":[-1.55,0.0,7.02,0.0,-28.1,-18.94,-24.28,-20.96,-30.45,-23.16,0.51,0.56],"z":[-0.43,0.0,1.93,0.0,-7.74,-5.22,-6.68,-5.77,-8.38,-6.38,0.14,0.15],"reglas":[[],[],[],[],[1],[1,2],[1,2],[1,2],[1,2],[1,2],[],[]],"fuera_2":6,"señal":true},{"local":"L04","valores":[-8.6,-3.77,-2.32,-2.84,-0.48,4.55,-1.12,-1.29,1.92,0.43,4.82,2.35],"z":[-2.37,-1.04,-0.64,-0.78,-0.13,1.25,-0.31,-0.36,0.53,0.12,1.33,0.65],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":1,"señal":false},{"local":"L06","valores":[0.0,-3.43,4.68,0.11,1.06,6.64,8.5,2.4,-5.75,5.35,-5.13,-0.16],"z":[0.0,-0.94,1.29,0.03,0.29,1.83,2.34,0.66,-1.58,1.47,-1.41,-0.04],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":1,"señal":false},{"local":"L07","valores":[-4.05,1.84,-2.02,-4.22,-8.24,-4.84,1.49,-2.9,-9.89,-2.73,-3.86,2.05],"z":[-1.11,0.51,-0.56,-1.16,-2.27,-1.33,0.41,-0.8,-2.72,-0.75,-1.06,0.56],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":2,"señal":false},{"local":"L08","valores":[-1.6,2.5,3.22,3.31,-5.08,5.02,4.35,4.47,-0.6,-0.74,-2.4,-2.15],"z":[-0.44,0.69,0.89,0.91,-1.4,1.38,1.2,1.23,-0.16,-0.2,-0.66,-0.59],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L09","valores":[-2.58,1.22,-0.12,-2.72,2.18,-2.32,12.31,0.0,1.29,-3.2,2.71,4.54],"z":[-0.71,0.34,-0.03,-0.75,0.6,-0.64,3.39,0.0,0.36,-0.88,0.75,1.25],"reglas":[[],[],[],[],[],[],[1],[],[],[],[],[]],"fuera_2":1,"señal":true},{"local":"L10","valores":[0.47,-0.4,0.0,-0.68,3.72,-2.28,-6.91,-5.69,0.77,-1.98,4.42,0.0],"z":[0.13,-0.11,0.0,-0.19,1.02,-0.63,-1.9,-1.57,0.21,-0.55,1.22,0.0],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L11","valores":[0.8,7.06,1.38,1.83,-3.69,-0.45,0.0,4.16,0.93,1.96,-3.67,-6.96],"z":[0.22,1.94,0.38,0.51,-1.02,-0.12,0.0,1.15,0.26,0.54,-1.01,-1.92],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L12","valores":[3.41,0.21,-6.68,-5.19,0.0,1.96,-2.56,-0.8,0.0,2.01,0.0,-2.74],"z":[0.94,0.06,-1.84,-1.43,0.0,0.54,-0.7,-0.22,0.0,0.55,0.0,-0.75],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false}]},"margen":{"centro":0.0,"sd":2.246,"sd_clasico":4.546,"locales":[{"local":"L01","valores":[0.26,-0.15,0.91,2.29,2.11,3.78,2.77,8.17,-1.4,0.5,0.0,-3.04],"z":[0.12,-0.07,0.41,1.02,0.94,1.68,1.23,3.64,-0.62,0.22,0.0,-1.35],"reglas":[[],[],[],[],[],[],[],[1],[],[],[],[]],"fuera_2":1,"señal":true},{"local":"L02","valores":[1.01,-0.04,-1.33,3.09,3.44,0.41,-1.63,3.11,0.0,0.46,2.2,1.19],"z":[0.45,-0.02,-0.59,1.38,1.53,0.18,-0.73,1.38,0.0,0.21,0.98,0.53],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L03","valores":[-0.53,1.81,1.45,0.24,-21.5,-13.91,-19.15,-14.89,-18.1,-18.55,1.95,0.38],"z":[-0.24,0.81,0.65,0.11,-9.57,-6.19,-8.53,-6.63,-8.06,-8.26,0.87,0.17],"reglas":[[],[],[],[],[1],[1,2],[1,2],[1,2],[1,2],[1,2],[],[]],"fuera_2":6,"señal":true},{"local":"L04","valores":[-2.67,-0.9,-2.19,-0.45,-0.02,2.74,-1.76,-0.25,0.56,1.5,3.14,1.89],"z":[-1.19,-0.4,-0.98,-0.2,-0.01,1.22,-0.78,-0.11,0.25,0.67,1.4,0.84],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L06","valores":[0.0,-1.6,2.13,0.0,0.0,2.32,3.15,1.12,-0.47,2.38,-2.43,0.0],"z":[0.0,-0.71,0.95,0.0,0.0,1.03,1.4,0.5,-0.21,1.06,-1.08,0.0],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L07","valores":[-2.83,1.9,-4.92,-5.3,-5.55,-5.4,-4.12,-2.51,-6.46,-3.62,-3.55,-4.93],"z":[-1.26,0.85,-2.19,-2.36,-2.47,-2.4,-1.83,-1.12,-2.88,-1.61,-1.58,-2.2],"reglas":[[],[],[],[2],[2],[2],[],[],[],[3],[3],[3]],"fuera_2":6,"señal":true},{"local":"L08","valores":[1.8,3.21,0.41,-0.45,-1.1,1.02,1.6,0.38,0.18,-2.39,-0.65,0.23],"z":[0.8,1.43,0.18,-0.2,-0.49,0.45,0.71,0.17,0.08,-1.06,-0.29,0.1],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false},{"local":"L09","valores":[-0.5,1.82,-0.48,-0.51,1.1,-0.96,7.57,0.0,0.75,-2.46,1.48,0.28],"z":[-0.22,0.81,-0.22,-0.22,0.49,-0.43,3.37,0.0,0.33,-1.1,0.66,0.12],"reglas":[[],[],[],[],[],[],[1],[],[],[],[],[]],"fuera_2":1,"señal":true},{"local":"L10","valores":[0.84,-1.49,1.8,0.68,1.94,-1.42,-4.4,-13.09,0.32,-1.53,1.41,-1.16],"z":[0.38,-0.66,0.8,0.3,0.86,-0.63,-1.96,-5.83,0.14,-0.68,0.63,-0.52],"reglas":[[],[],[],[],[],[],[],[1],[],[],[],[]],"fuera_2":1,"señal":true},{"local":"L11","valores":[3.81,3.93,0.0,2.2,-1.01,-0.61,0.37,1.77,1.25,1.61,-1.5,-5.91],"z":[1.7,1.75,0.0,0.98,-0.45,-0.27,0.17,0.79,0.55,0.72,-0.67,-2.63],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":1,"señal":false},{"local":"L12","valores":[-0.34,0.0,-2.74,-2.65,2.7,0.0,0.0,-0.0,-0.8,0.0,-2.04,-2.14],"z":[-0.15,0.0,-1.22,-1.18,1.2,0.0,0.0,-0.0,-0.35,0.0,-0.91,-0.95],"reglas":[[],[],[],[],[],[],[],[],[],[],[],[]],"fuera_2":0,"señal":false}]}},"contra_ppto":[{"local":"L01","desvio_nominal":[5.1,0.4,6.6,9.1,-1.9,10.1,11.1,10.1,9.7,8.4,6.6,6.5],"desvio_constante":[-0.3,-5.7,-1.2,-0.1,-11.7,-1.9,-1.7,-3.0,-3.7,-5.4,-7.4,-7.8],"meses_fuera_nominal":10,"meses_fuera_constante":5},{"local":"L02","desvio_nominal":[1.9,-2.1,6.0,6.5,1.4,3.7,8.9,13.3,14.5,7.3,15.0,12.5],"desvio_constante":[-3.3,-8.0,-1.7,-2.4,-8.8,-7.6,-3.6,-0.2,0.4,-6.4,-0.1,-2.5],"meses_fuera_nominal":8,"meses_fuera_constante":4},{"local":"L03","desvio_nominal":[4.5,-0.4,5.9,3.6,-28.9,-18.1,-19.4,-18.6,-20.0,-17.8,7.2,10.0],"desvio_constante":[-0.9,-6.4,-1.8,-5.1,-36.0,-27.0,-28.7,-28.3,-29.8,-28.3,-6.9,-4.7],"meses_fuera_nominal":9,"meses_fuera_constante":9},{"local":"L04","desvio_nominal":[-1.6,4.5,1.0,-0.4,0.5,10.4,7.1,7.8,5.6,8.2,12.2,14.8],"desvio_constante":[-6.7,-1.8,-6.3,-8.8,-9.5,-1.6,-5.2,-5.1,-7.4,-5.7,-2.5,-0.6],"meses_fuera_nominal":7,"meses_fuera_constante":8},{"local":"L06","desvio_nominal":[1.3,0.0,2.7,4.3,0.1,9.3,13.3,4.4,5.8,10.0,7.4,8.8],"desvio_constante":[-3.9,-6.0,-4.7,-4.5,-9.9,-2.6,0.3,-8.0,-7.2,-4.1,-6.7,-5.8],"meses_fuera_nominal":6,"meses_fuera_constante":6},{"local":"L07","desvio_nominal":[-2.9,2.9,-4.1,-4.5,-4.6,-2.5,0.9,1.4,2.3,6.9,3.9,3.3],"desvio_constante":[-7.9,-3.3,-11.1,-12.6,-14.2,-13.1,-10.7,-10.7,-10.2,-6.8,-9.8,-10.5],"meses_fuera_nominal":1,"meses_fuera_constante":11},{"local":"L08","desvio_nominal":[0.9,2.3,5.9,5.2,-3.2,7.2,10.3,12.3,6.9,6.9,7.3,8.2],"desvio_constante":[-4.3,-3.9,-1.7,-3.7,-12.9,-4.5,-2.4,-1.1,-6.2,-6.7,-6.8,-6.3],"meses_fuera_nominal":9,"meses_fuera_constante":5},{"local":"L09","desvio_nominal":[2.0,5.3,-0.2,5.0,0.5,4.5,11.9,8.4,8.7,6.7,11.2,14.2],"desvio_constante":[-3.2,-1.1,-7.5,-3.8,-9.5,-6.9,-1.0,-4.5,-4.6,-7.0,-3.4,-1.1],"meses_fuera_nominal":8,"meses_fuera_constante":4},{"local":"L10","desvio_nominal":[5.5,0.1,3.5,5.3,4.6,5.2,0.4,-1.0,8.9,6.9,12.6,4.8],"desvio_constante":[0.0,-5.9,-4.0,-3.6,-5.9,-6.2,-11.1,-12.8,-4.5,-6.8,-2.2,-9.2],"meses_fuera_nominal":6,"meses_fuera_constante":7},{"local":"L11","desvio_nominal":[3.5,7.3,-1.2,4.5,-2.1,5.8,5.7,7.3,9.2,12.4,8.0,5.5],"desvio_constante":[-1.8,0.8,-8.4,-4.3,-11.9,-5.8,-6.5,-5.5,-4.2,-2.0,-6.2,-8.6],"meses_fuera_nominal":8,"meses_fuera_constante":7},{"local":"L12","desvio_nominal":[4.8,0.8,0.3,2.2,-1.5,7.3,3.4,7.4,7.2,9.2,9.4,5.9],"desvio_constante":[-0.6,-5.3,-7.0,-6.4,-11.4,-4.4,-8.5,-5.4,-6.0,-4.7,-5.0,-8.3],"meses_fuera_nominal":6,"meses_fuera_constante":8}],"incidentes":[{"fecha":"2026-01-20","local":"L07","tipo":"Renuncia del encargado","detalle":"Rotación alta desde enero: horas extra y menor productividad"},{"fecha":"2026-03-02","local":"L03","tipo":"Obra vial en el acceso","detalle":"Obra en la ruta hasta agosto: acceso reducido, -25 % de tickets"},{"fecha":"2026-06-17","local":"L10","tipo":"Rotura de cámara de frío","detalle":"Se perdió mercadería (merma) y hubo reparación urgente"}]}</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const GEN = '09/11/2026';
+
+// ------------------------------------------------------------------ formato es-AR
+const _nf = {};
+const nf = d => (_nf[d] ??= new Intl.NumberFormat('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const MENOS = '−';
+const sgn = (x, s) => s ? (x > 0 ? '+' : x < 0 ? MENOS : '') : (x < 0 ? MENOS : '');
+/** millones -> "$ 1.234,5 M" */
+const NB = ' ';
+const M = (v, d = 1, s = false) => { const r = Math.round(v * 10 ** d) / 10 ** d; return sgn(r, s) + '$' + NB + nf(d).format(Math.abs(r)) + NB + 'M'; };
+/** pesos -> millones */
+const MP = (v, d = 1, s = false) => M(v / 1e6, d, s);
+/** ratio -> "15,4 %" */
+const P = (r, s = true, d = 1) => { const x = Math.round(r * 100 * 10 ** d) / 10 ** d; if (x === 0) return '0' + NB + '%'; return sgn(x, s) + nf(d).format(Math.abs(x)) + NB + '%'; };
+/** puntos porcentuales ya en p.p. -> "+1,2 p.p." */
+const PP = (x, s = true, d = 1) => { const r = Math.round(x * 10 ** d) / 10 ** d; return r === 0 ? '0' + NB + 'p.p.' : sgn(r, s) + nf(d).format(Math.abs(r)) + NB + 'p.p.'; };
+const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const mes = p => MES[+p.slice(5, 7) - 1] + '-' + p.slice(2, 4);
+const mesLargo = p => ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][+p.slice(5, 7) - 1] + ' ' + p.slice(0, 4);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = id => document.getElementById(id);
+const PER = D.periodos.concat(D.periodos_f);
+const NH = D.periodos.length, NF = D.periodos_f.length;
+const R = D.resumen;
+const BT = Object.fromEntries(D.backtest.map(b => [b.id, b]));
+const BTC = Object.fromEntries(D.backtest_contrib.map(b => [b.id, b]));
+const ELEG = BT[D.metodo_elegido];
+const ESC = Object.fromEntries(D.escenarios.map(e => [e.id, e]));
+const LOC = Object.fromEntries(D.locales.map(l => [l.id, l]));
+const S = { local: 'red', ind: 'v', mon: 'c', band: 'margen', esc: 'base' };
+
+// ------------------------------------------------------------------ tooltip
+const tip = $('tip');
+function verTip(html, x, y) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, x + 14)) + 'px';
+  tip.style.top = Math.max(8, (y + h + 20 > innerHeight ? y - h - 12 : y + 14)) + 'px';
+}
+const ocultarTip = () => { tip.style.opacity = 0; };
+
+// ------------------------------------------------------------------ utilidades SVG
+function ticks(min, max, n = 5) {
+  const paso0 = (max - min) / n, mag = 10 ** Math.floor(Math.log10(paso0)), f = paso0 / mag;
+  const paso = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  const out = []; for (let v = Math.ceil(min / paso) * paso; v <= max + 1e-9; v += paso) out.push(+v.toFixed(10));
+  return out;
+}
+const linea = pts => pts.filter(p => p[1] !== null && !isNaN(p[1])).map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
+
+// ------------------------------------------------------------------ (a) titular y (b) tarjetas
+function cabecera() {
+  $('corte').textContent = 'Datos reales hasta ' + mes(D.periodos[NH - 1]) + ' · pronóstico ' + mes(D.periodos_f[0]) + ' a ' + mes(D.periodos_f[NF - 1]);
+  const dV = R.cierre26_V / R.ppto26_V - 1, dC = R.cierre26_C / R.ppto26_C - 1;
+  const g27 = R.v27_const / R.v26_const - 1, e = ESC.base;
+  $('titular').innerHTML =
+    `<b>2026 cierra con ventas por ${MP(R.cierre26_V)}</b> (${P(dV)} sobre el presupuesto en pesos) <b>pero con una contribución de ${MP(R.cierre26_C)}, ${P(-dC, false)} abajo</b>: el presupuesto supuso menos inflación y más clientes de los que hubo. ` +
+    `<b>En 2027, en moneda constante, la venta queda plana (${P(g27)})</b>: con una inflación de ${nf(1).format(e.infl_mensual)}&nbsp;% mensual crecería ${P(e.crec_nominal)} en pesos, y todo eso es precio. ` +
+    `El método elegido se equivocó en promedio ${P(ELEG.anual_wape_red, false)} por mes al pronosticar un año entero; el presupuesto, ${P(BT.ppto.anual_wape_red, false)}, y siempre para arriba.`;
+
+  const t = [
+    { k: 'Cierre 2026 · ventas', v: MP(R.cierre26_V), d: `<span class="${dV >= 0 ? 'up' : ''}">${P(dV)}</span> contra presupuesto (${MP(R.ppto26_V)})<br>Rango 80 %: ${MP(R.cierre26_V_i[0], 0)} a ${MP(R.cierre26_V_i[1], 0)}` },
+    { k: 'Cierre 2026 · contribución', v: MP(R.cierre26_C), d: `${P(dC)} contra presupuesto (${MP(R.ppto26_C)})<br>Rango 80 %: ${MP(R.cierre26_C_i[0], 0)} a ${MP(R.cierre26_C_i[1], 0)}` },
+    { k: 'Ventas 2027 · moneda constante', v: MP(R.v27_const), d: `${P(g27)} contra 2026 · mismos locales ${P(R.v27_const_mismos / R.v26_const_mismos - 1)}<br>Rango 80 %: ${MP(R.v27_const_i[0], 0)} a ${MP(R.v27_const_i[1], 0)}` },
+    { k: 'Contribución 2027 · moneda constante', v: MP(R.c27_const), d: `${P(R.c27_const / R.c26_const - 1)} contra 2026<br>Rango 80 %: ${MP(R.c27_const_i[0], 0)} a ${MP(R.c27_const_i[1], 0)}` },
+    { k: 'Error mensual a 12 meses', v: `${P(ELEG.anual_wape_red, false)} <span style="font-size:.6em;color:var(--ink2);font-weight:500">vs ${P(BT.ppto.anual_wape_red, false)}</span>`, d: `Método elegido contra el presupuesto (WAPE de la red, mismos locales)<br>A 1-3 meses: ${P(ELEG.corto_wape_red, false)} vs ${P(BT.ppto.corto_wape_red, false)}` },
+    { k: 'Sesgo del presupuesto', v: P(BT.ppto.anual_sesgo_red), d: `Sobreestimó el volumen en los 12 meses. En pesos quedó ${P(-R.sesgo_ppto_nominal_12m, false)} corto: supuso ${P(R.infl_supuesta_ppto_12m, false)} de inflación y hubo ${P(R.infl_ultimos_12m, false)}` },
+  ];
+  $('tiles').innerHTML = t.map(x => `<div class="tile"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+}
+
+// ------------------------------------------------------------------ (c) gráfico real + pronóstico
+function datosSerie() {
+  const s = D.series[S.local], i = S.ind, m = S.mon, fac = ESC.base.factor;
+  const k = j => (m === 'n' ? fac[j] : 1);
+  return {
+    real: s[`${i}_real_${m}`], ppto: s[`${i}_ppto_${m}`],
+    pron: s[`${i}_pron`].map((v, j) => v * k(j)), lo: s[`${i}_lo`].map((v, j) => v * k(j)), hi: s[`${i}_hi`].map((v, j) => v * k(j)),
+  };
+}
+function graficoPron() {
+  const cont = $('g-pron'), W = cont.clientWidth, H = W < 520 ? 250 : 320;
+  const m = { l: W < 520 ? 44 : 58, r: 12, t: 14, b: 30 };
+  const x0 = m.l, x1 = W - m.r, y0 = m.t, y1 = H - m.b, N = NH + NF;
+  const s = datosSerie();
+  const todos = [...s.real, ...s.ppto, ...s.lo, ...s.hi].filter(v => v !== null && !isNaN(v));
+  let lo = Math.min(...todos), hi = Math.max(...todos); const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  if (lo > 0 && lo < (hi - lo) * 0.25) lo = 0;
+  const tk = ticks(lo, hi, 5); lo = Math.min(lo, tk[0]); hi = Math.max(hi, tk[tk.length - 1]);
+  const X = j => x0 + (x1 - x0) * j / (N - 1), Y = v => y1 - (y1 - y0) * (v - lo) / (hi - lo);
+  let g = `<svg width="${W}" height="${H}" role="img" aria-label="Real, presupuesto y pronóstico mensual">`;
+  // fondo del pronóstico
+  g += `<rect x="${X(NH - 0.5)}" y="${y0}" width="${x1 - X(NH - 0.5)}" height="${y1 - y0}" fill="#fbf7f3"/>`;
+  tk.forEach(v => { g += `<line x1="${x0}" x2="${x1}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/><text x="${x0 - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${nf(0).format(v)}</text>`; });
+  if (lo < 0) g += `<line x1="${x0}" x2="${x1}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--axis)"/>`;
+  // años y meses
+  const cada = W < 520 ? 6 : 3;
+  PER.forEach((p, j) => {
+    if (p.endsWith('-01')) g += `<line x1="${X(j)}" x2="${X(j)}" y1="${y0}" y2="${y1}" stroke="var(--grid)" stroke-dasharray="2 3"/>`;
+    if (j % cada === 0) g += `<text x="${X(j)}" y="${y1 + 18}" text-anchor="middle" font-size="11" fill="var(--muted)">${mes(p)}</text>`;
+  });
+  g += `<line x1="${x0}" x2="${x1}" y1="${y1}" y2="${y1}" stroke="var(--axis)"/>`;
+  // banda
+  const top = s.hi.map((v, j) => [X(NH + j), Y(v)]), bot = s.lo.map((v, j) => [X(NH + j), Y(v)]).reverse();
+  const ult = [X(NH - 1), Y(s.real[NH - 1])];
+  g += `<path d="M${ult[0]},${ult[1]} ${top.map(p => 'L' + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')} ${bot.map(p => 'L' + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')} Z" fill="var(--pron-band)"/>`;
+  g += `<path d="${linea(s.ppto.map((v, j) => [X(j), v === null ? null : Y(v)]))}" fill="none" stroke="var(--ppto)" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  g += `<path d="${linea(s.real.map((v, j) => [X(j), v === null ? null : Y(v)]))}" fill="none" stroke="var(--real)" stroke-width="2.4"/>`;
+  g += `<path d="M${ult[0]},${ult[1]} ${s.pron.map((v, j) => 'L' + X(NH + j).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ')}" fill="none" stroke="var(--pron)" stroke-width="2.4" stroke-dasharray="6 4"/>`;
+  g += `<text x="${X(NH) + 4}" y="${y0 + 14}" font-size="11.5" fill="var(--pron)" font-weight="600">Pronóstico →</text>`;
+  g += `<line id="guia" x1="0" x2="0" y1="${y0}" y2="${y1}" stroke="var(--ink2)" stroke-width="1" opacity="0"/>`;
+  g += `<rect id="capa" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="transparent"/></svg>`;
+  cont.innerHTML = g;
+  const capa = cont.querySelector('#capa'), guia = cont.querySelector('#guia');
+  const mover = ev => {
+    const r = capa.getBoundingClientRect(), j = Math.max(0, Math.min(N - 1, Math.round((ev.clientX - r.left) / r.width * (N - 1))));
+    guia.setAttribute('x1', X(j)); guia.setAttribute('x2', X(j)); guia.setAttribute('opacity', .5);
+    let h = `<b>${mesLargo(PER[j])}</b><br>`;
+    if (j < NH) {
+      h += `Real: ${M(s.real[j])}` + (s.ppto[j] !== null ? `<br>Presupuesto: ${M(s.ppto[j])} (real ${P(s.real[j] / s.ppto[j] - 1)})` : '');
+    } else {
+      const k = j - NH; h += `Pronóstico: ${M(s.pron[k])}<br>Rango 80 %: ${M(s.lo[k])} a ${M(s.hi[k])}`;
+    }
+    verTip(h, ev.clientX, ev.clientY);
+  };
+  capa.addEventListener('pointermove', mover); capa.addEventListener('pointerdown', mover);
+  capa.addEventListener('pointerleave', () => { ocultarTip(); guia.setAttribute('opacity', 0); });
+
+  // título-conclusión y nota
+  const se = D.series[S.local], nom = S.local === 'red' ? 'La red' : `${S.local} ${LOC[S.local].nombre}`;
+  if (S.ind === 'v') {
+    const g27 = se.v27 / se.v26 - 1;
+    $('t-pron').textContent = `${nom}: en 2027 vende ${M(se.v27, 0)} en moneda constante, ${P(g27)} contra 2026`;
+  } else {
+    const gc = se.c27 / se.c26 - 1;   // con una base muy chica (L03 en 2026, por la obra) el % no dice nada: se muestra el valor
+    $('t-pron').textContent = `${nom}: en 2027 aporta ${M(se.c27, 0)} de contribución en moneda constante, ` + (Math.abs(gc) > 1 ? `contra ${M(se.c26, 0)} en 2026` : `${P(gc)} contra 2026`);
+  }
+  const extra = {
+    L03: ' L03 tuvo una obra en la ruta de marzo a agosto de 2026: el modelo no usa esos meses para estimar su nivel, por eso 2027 vuelve a lo normal. Su banda es ancha porque el backtest incluye la obra.',
+    L05: ' L05 abrió en nov-25: sus primeros 6 meses (rampa de apertura) no entrenan el modelo y no tiene backtest propio; su banda usa el error típico de los demás locales.',
+    L07: ` L07 arrastra un problema de personal desde enero: el pronóstico supone que sigue. Si su margen volviera al de 2025, sumaría ${MP(R.l07_valor_2027, 0)} de contribución en 2027.`,
+  }[S.local] || '';
+  $('n-pron').innerHTML = (S.mon === 'c' ? 'Moneda constante: pesos de octubre de 2026 (real deflactado con el IPC real; presupuesto, con el IPC que supuso el propio presupuesto). ' : `Pesos corrientes: el pronóstico se reinfla con el escenario base (${nf(1).format(ESC.base.infl_mensual)}&nbsp;% mensual). `) +
+    `El rango sale de los errores del backtest: 8 de cada 10 meses deberían caer adentro.` + extra;
+}
+
+// ------------------------------------------------------------------ (d) backtest
+function backtest() {
+  const dz = D.backtest_diseno;
+  $('t-bt').textContent = `El presupuesto se equivocó ${nf(1).format(BT.ppto.anual_wape_red / ELEG.anual_wape_red)} veces más que el método elegido, y siempre para arriba`;
+  $('bt-diseno').innerHTML = `<b>Backtest</b>: se entrena cada método solo con lo que se sabía hasta un corte y se mide el error en los meses siguientes, que ya ocurrieron. ` +
+    `<b>A 1-3 meses</b>: ${dz.corto.cortes.length} cortes (${mes(dz.corto.cortes[0])} a ${mes(dz.corto.cortes.at(-1))}), lo que pide un cierre de año. ` +
+    `<b>A 12 meses</b>: corte en ${mes(dz.anual.corte)} y pronóstico de ${mes(dz.anual.meses[0])} a ${mes(dz.anual.meses.at(-1))}, lo mismo que hace un presupuesto. ` +
+    `Solo los 11 locales abiertos todo el período (L05 abrió en nov-25). Todo en moneda constante.`;
+  const maxW = Math.max(...D.backtest.map(b => b.anual_wape_red));
+  const bar = (v, pp) => `<span class="barra${pp ? ' pp' : ''}" style="width:${Math.round(60 * v / maxW)}px"></span>`;
+  const ses = v => `${P(v)}`;
+  let t = `<thead><tr><th class="txt">Método</th><th>Error red<br>a 1-3 meses</th><th>Sesgo<br>a 1-3 meses</th><th>Error red<br>a 12 meses</th><th>Sesgo<br>a 12 meses</th><th>Error por local<br>a 12 meses</th></tr></thead><tbody>`;
+  for (const b of D.backtest) {
+    const el = b.id === D.metodo_elegido, pp = b.id === 'ppto';
+    t += `<tr class="${el ? 'eleg' : pp ? 'ppto' : ''}"><td class="txt">${esc(b.nombre)} ${el ? '<span class="chip eleg">elegido</span>' : pp ? '<span class="chip gris">a vencer</span>' : ''}<span class="desc">${esc(b.desc)}</span></td>` +
+      `<td>${P(b.corto_wape_red, false)}</td><td>${ses(b.corto_sesgo_red)}</td><td>${P(b.anual_wape_red, false)}${bar(b.anual_wape_red, pp)}</td><td>${ses(b.anual_sesgo_red)}</td><td>${P(b.anual_wape_local, false)}</td></tr>`;
+  }
+  $('tb-bt').innerHTML = t + '</tbody>';
+  const ic = BT.ingenuo_crec;
+  $('bt-criterio').innerHTML = `<b>Error</b> = WAPE: suma de los errores en valor absoluto sobre la suma de lo real. <b>Sesgo</b> positivo = el método pronosticó de más. ` +
+    `<b>Por qué este método</b>: el criterio, fijado antes de mirar, es el menor promedio de los cuatro errores (red y local, 1-3 y 12 meses). ` +
+    `A nivel red empata con el ingenuo con crecimiento (las diferencias son de décimas, menores que el ruido), pero por local es claramente mejor (${P(ELEG.anual_wape_local, false)} contra ${P(ic.anual_wape_local, false)}), sirve para L05, que todavía no tiene un año normal, y separa la estacionalidad de la tendencia. ` +
+    `Estimar la estacionalidad de cada local con 24 meses (dos datos por mes) no mejora: un patrón por tipo de local (urbano y ruta) gana.`;
+
+  let c = `<thead><tr><th class="txt">Cómo se pronostica la contribución</th><th>Error red<br>a 1-3 meses</th><th>Sesgo</th><th>Error red<br>a 12 meses</th><th>Sesgo</th><th>Error por local<br>a 12 meses</th></tr></thead><tbody>`;
+  for (const b of D.backtest_contrib) {
+    const el = b.id === D.modo_contribucion, pp = b.id === 'ppto';
+    c += `<tr class="${el ? 'eleg' : pp ? 'ppto' : ''}"><td class="txt">${esc(b.nombre)} ${el ? '<span class="chip eleg">elegido</span>' : pp ? '<span class="chip gris">a vencer</span>' : ''}</td>` +
+      `<td>${P(b.corto_wape_red, false)}</td><td>${P(b.corto_sesgo_red)}</td><td>${P(b.anual_wape_red, false)}</td><td>${P(b.anual_sesgo_red)}</td><td>${P(b.anual_wape_local, false)}</td></tr>`;
+  }
+  $('tb-btc').innerHTML = c + '</tbody>';
+  const pc = BTC[D.modo_contribucion];
+  $('btc-nota').innerHTML = `La contribución es más difícil: es una diferencia entre ventas y costos, y cualquier error se agranda. El modelo de <b>margen variable menos costos fijos</b> (por local, con los últimos 12 meses) capta que en los meses fuertes el margen sube. ` +
+    `Aun así <b>sobreestimó ${P(pc.anual_sesgo_red, false)}</b>: 2026 tuvo una obra, una rotura y un problema de personal, que ningún método prevé. Para el presupuesto, conviene una reserva de ese tamaño.`;
+}
+
+// ------------------------------------------------------------------ (e) bandas de control
+function senales(x) { return x.reglas.some(r => r.length); }
+function bandas() {
+  const B = D.bandas[S.band], sd = B.sd, nombre = S.band === 'margen' ? 'margen' : 'ventas';
+  const meses = D.periodos.slice(NH - 12);
+  const conSenal = D.bandas.ventas.locales.map((x, j) => senales(x) || senales(D.bandas.margen.locales[j]));
+  const nSen = conSenal.filter(Boolean).length;
+  const cp = D.contra_ppto, nPpto = cp.filter(x => x.meses_fuera_nominal > 0).length;
+  const promPpto = cp.reduce((a, x) => a + x.meses_fuera_nominal, 0) / cp.length;
+  const plant = new Set(D.incidentes.map(i => i.local));
+  const coinciden = D.bandas.ventas.locales.filter((x, j) => conSenal[j] && plant.has(x.local)).length;
+  const otros = D.bandas.ventas.locales.map((x, j) => ({ v: x, m: D.bandas.margen.locales[j] })).filter((f, j) => conSenal[j] && !plant.has(f.v.local));
+  const aislados = otros.every(f => [f.v, f.m].every(x => x.reglas.every((r, j) => !r.length || x.z[j] > 0)));
+  $('t-bandas').textContent = `${coinciden} de los ${nSen} locales con señales coinciden con un problema registrado` +
+    (otros.length ? (aislados ? `; los otros ${otros.length} son meses aislados hacia arriba` : `; ${otros.length} no tienen causa registrada`) : '');
+  $('bandas-intro').innerHTML = `Con la regla fija <b>"más de ±5 % contra presupuesto"</b>, <b>${nPpto} de ${cp.length} locales</b> piden explicación (en promedio ${nf(0).format(promPpto)} de cada 12 meses): el presupuesto sesgado genera alarmas en todos lados. ` +
+    `Con <b>bandas de control</b> se compara a cada local con su propio año anterior y con lo que le pasó al resto de la red: <b>${nSen} locales</b> muestran señales y ${coinciden} coinciden con un incidente registrado en el Caso 05.`;
+  $('bandas-def').innerHTML = S.band === 'margen'
+    ? `Indicador: cambio del margen de contribución del local contra el mismo mes del año anterior, menos el cambio mediano de la red (p.p.). Desvío típico: ${PP(sd, false)}.`
+    : `Indicador: crecimiento interanual de las ventas del local en moneda constante, menos el crecimiento mediano de la red (p.p.). Desvío típico: ${PP(sd, false)}.`;
+  $('bandas-def').innerHTML += ` Centro y desvío robustos (mediana y MAD × 1,4826): los meses raros no ensanchan la banda. <b>Señal</b> = un mes fuera de ±3 desvíos, 2 de 3 meses seguidos fuera de ±2 del mismo lado, u 8 meses seguidos del mismo lado.`;
+
+  const cont = $('g-bandas'); cont.innerHTML = '';
+  const fichas = B.locales.map(x => {
+    const s = senales(x), f2 = x.fuera_2;
+    const chip = s ? '<span class="chip bad">señal · explicar</span>' : f2 ? '<span class="chip warn">mirar</span>' : '<span class="chip ok">ruido</span>';
+    return { x, s, html: `<div class="card${s ? ' senal' : ''}"><h4>${x.local} <span class="n">${esc(LOC[x.local].nombre)}</span> ${chip}</h4><div class="mg"></div></div>` };
+  });
+  fichas.sort((a, b) => (b.s - a.s) || (b.x.fuera_2 - a.x.fuera_2) || a.x.local.localeCompare(b.x.local));
+  cont.innerHTML = fichas.map(f => f.html).join('') + `<div class="card"><h4>L05 <span class="n">${esc(LOC.L05.nombre)}</span> <span class="chip gris">sin año anterior</span></h4><p class="nota">Abrió en nov-25: recién en nov-26 tiene contra qué compararse.</p></div>`;
+  const mgs = cont.querySelectorAll('.mg');
+  fichas.forEach((f, idx) => {
+    const el = mgs[idx], W = el.clientWidth || 240, H = 118, m = { l: 34, r: 6, t: 8, b: 18 };
+    const vals = f.x.valores, L = Math.max(3.4 * sd, ...vals.map(Math.abs)) * 1.08;
+    const X = j => m.l + (W - m.l - m.r) * j / 11, Y = v => m.t + (H - m.t - m.b) * (L - v) / (2 * L);
+    let g = `<svg width="${W}" height="${H}">`;
+    g += `<rect x="${m.l}" y="${Y(2 * sd)}" width="${W - m.l - m.r}" height="${Y(-2 * sd) - Y(2 * sd)}" fill="var(--band)"/>`;
+    [3, -3].forEach(k => { g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(k * sd)}" y2="${Y(k * sd)}" stroke="var(--axis)" stroke-dasharray="3 3"/>`; });
+    g += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--axis)"/>`;
+    const marcas = (Y(-2 * sd) - Y(2 * sd) >= 26) ? [2 * sd, 0, -2 * sd] : [Math.floor(L), 0, -Math.floor(L)];
+    marcas.forEach(v => { g += `<text x="${m.l - 4}" y="${Y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${v > 0 ? '+' : v < 0 ? MENOS : ''}${nf(0).format(Math.abs(v))}</text>`; });
+    g += `<text x="${X(0)}" y="${H - 4}" font-size="10" fill="var(--muted)">${mes(meses[0])}</text><text x="${X(11)}" y="${H - 4}" text-anchor="end" font-size="10" fill="var(--muted)">${mes(meses[11])}</text>`;
+    g += `<path d="${linea(vals.map((v, j) => [X(j), Y(v)]))}" fill="none" stroke="#9aa3b2" stroke-width="1.4"/>`;
+    vals.forEach((v, j) => {
+      const r = f.x.reglas[j].length, z = Math.abs(f.x.z[j]);
+      const col = r ? 'var(--bad)' : z > 2 ? 'var(--warn)' : '#6b7a90';
+      g += `<circle cx="${X(j)}" cy="${Y(v)}" r="${r || z > 2 ? 4.2 : 2.8}" fill="${col}" data-j="${j}"/>`;
+      g += `<circle cx="${X(j)}" cy="${Y(v)}" r="11" fill="transparent" data-j="${j}"/>`;
+    });
+    el.innerHTML = g + '</svg>';
+    const regla = { 1: 'un mes fuera de ±3 desvíos', 2: '2 de 3 meses fuera de ±2', 3: '8 meses seguidos del mismo lado' };
+    el.querySelector('svg').addEventListener('pointerover', ev => {
+      const j = ev.target.dataset && ev.target.dataset.j; if (j === undefined) return;
+      const rr = f.x.reglas[+j];
+      verTip(`<b>${f.x.local} · ${mesLargo(meses[+j])}</b><br>${S.band === 'margen' ? 'Margen' : 'Ventas'} contra la red: ${PP(vals[+j])}<br>${nf(1).format(f.x.z[+j]).replace('-', MENOS)} desvíos típicos` + (rr.length ? `<br><b style="color:var(--bad)">Señal:</b> ${rr.map(k => regla[k]).join('; ')}` : ''), ev.clientX, ev.clientY);
+    });
+    el.querySelector('svg').addEventListener('pointerout', ocultarTip);
+  });
+
+  // veredicto por local
+  const filas = D.bandas.ventas.locales.map((xv, j) => ({ v: xv, m: D.bandas.margen.locales[j] })).filter(f => senales(f.v) || senales(f.m));
+  const desc = x => {
+    const ms = x.reglas.map((r, j) => r.length ? j : -1).filter(j => j >= 0);
+    if (!ms.length) return '<span class="chip ok">ruido</span>';
+    const dir = x.z[ms[0]] < 0 ? 'abajo' : 'arriba';
+    return `<span class="chip bad">señal</span> ${ms.length === 1 ? mes(meses[ms[0]]) : mes(meses[ms[0]]) + ' a ' + mes(meses[ms.at(-1)])}, hacia ${dir}`;
+  };
+  let t = `<thead><tr><th class="txt">Local</th><th class="txt">Ventas</th><th class="txt">Margen</th><th class="txt">Causa en el registro de incidentes</th><th class="txt">Qué hacer</th></tr></thead><tbody>`;
+  for (const f of filas) {
+    const id = f.v.local, inc = D.incidentes.filter(i => i.local === id);
+    const ult = Math.max(...[f.v, f.m].flatMap(x => x.reglas.map((r, j) => r.length ? j : -1)));
+    const abajo = [f.v, f.m].some(x => x.reglas.some((r, j) => r.length && x.z[j] < 0));
+    let accion;
+    if (inc.length && ult >= 10) accion = `<b>Sigue abierto</b>: plan de acción con responsable. ${id === 'L07' ? `Vale ${MP(R.l07_valor_2027, 0)} de contribución en 2027.` : ''}`;
+    else if (inc.length) accion = 'Explicado y terminado: no se arrastra al pronóstico 2027.';
+    else if (!abajo) accion = 'Hacia arriba y sin causa registrada: preguntar qué pasó (¿algo para copiar?). Puede ser azar.';
+    else accion = 'Sin causa registrada: pedir explicación al gerente del local.';
+    t += `<tr><td class="txt"><b>${id}</b> ${esc(LOC[id].nombre)}</td><td class="txt">${desc(f.v)}</td><td class="txt">${desc(f.m)}</td>` +
+      `<td class="txt">${inc.length ? inc.map(i => `${esc(i.tipo)} (${i.fecha.split('-').reverse().join('/')}): ${esc(i.detalle)}`).join('<br>') : '—'}</td><td class="txt">${accion}</td></tr>`;
+  }
+  $('tb-ver').innerHTML = t + '</tbody>';
+  $('ver-nota').textContent = `Con ${D.bandas.ventas.locales.length * 12 * 2} mediciones (11 locales × 12 meses × 2 indicadores), alguna falsa alarma es esperable: por eso un solo mes hacia arriba sin causa se pregunta, no se premia ni se castiga. L07 casi no se ve en ventas (su caída es del tamaño del ruido mensual) pero sí en el margen: por eso se miran los dos.`;
+}
+
+// ------------------------------------------------------------------ (f) inflación
+function inflacion() {
+  const e = ESC[S.esc], v26 = e.ventas_2026, v27 = e.ventas_2027;
+  const vol = v26 * e.crec_real, precio = v27 - v26 - vol;
+  $('t-infl').textContent = `En 2027 todo el crecimiento en pesos es precio: entre ${P(ESC.bajo.crec_nominal)} y ${P(ESC.alto.crec_nominal)} según la inflación, con el volumen plano`;
+  const cont = $('g-wf'), W = cont.clientWidth, H = 230, m = { l: 8, r: 8, t: 22, b: 40 };
+  const pasos = [
+    { n: 'Ventas 2026', a: 0, b: v26, c: 'var(--real)' },
+    { n: 'Volumen', a: v26, b: v26 + vol, c: vol < 0 ? 'var(--bad)' : 'var(--good)' },
+    { n: 'Precio (inflación)', a: v26 + vol, b: v27, c: 'var(--pron)' },
+    { n: 'Ventas 2027', a: 0, b: v27, c: 'var(--real)' },
+  ];
+  const max = Math.max(...pasos.map(p => Math.max(p.a, p.b))) * 1.08;
+  const bw = (W - m.l - m.r) / pasos.length, Y = v => m.t + (H - m.t - m.b) * (1 - v / max);
+  let g = `<svg width="${W}" height="${H}" role="img" aria-label="Puente de ventas 2026 a 2027">`;
+  pasos.forEach((p, i) => {
+    const x = m.l + i * bw + bw * 0.18, w = bw * 0.64, y = Y(Math.max(p.a, p.b)), h = Math.max(1.5, Math.abs(Y(p.a) - Y(p.b)));
+    g += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${p.c}" rx="3"/>`;
+    const val = i === 0 || i === 3 ? MP(p.b, 0) : MP(p.b - p.a, 0, true);
+    g += `<text x="${x + w / 2}" y="${y - 6}" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--ink)">${val}</text>`;
+    g += `<text x="${x + w / 2}" y="${H - m.b + 16}" text-anchor="middle" font-size="11" fill="var(--ink2)">${p.n}</text>`;
+    if (i < 3) g += `<line x1="${x + w}" x2="${x + bw}" y1="${Y(p.b)}" y2="${Y(p.b)}" stroke="var(--axis)" stroke-dasharray="2 2"/>`;
+  });
+  cont.innerHTML = g + '</svg>';
+  $('n-wf').innerHTML = `Escenario ${S.esc}: ${nf(1).format(e.infl_mensual)}&nbsp;% mensual (${nf(1).format(e.infl_anual)}&nbsp;% anual). De un crecimiento nominal de ${P(e.crec_nominal)}, el volumen aporta ${P(e.crec_real)} y el precio ${P(e.efecto_precio)}. ` +
+    `Supuesto: los precios de la carta siguen al IPC desde oct-26 con el mismo atraso que en 2026 (ese atraso ya está en la tendencia en moneda constante).`;
+  let t = `<thead><tr><th class="txt">Escenario</th><th>Inflación<br>mensual</th><th>Inflación<br>2027</th><th>Ventas 2027</th><th>Crecimiento<br>nominal</th><th>Del cual<br>precio</th><th>Contribución 2027</th></tr></thead><tbody>`;
+  for (const k of ['bajo', 'base', 'alto']) {
+    const x = ESC[k];
+    t += `<tr class="${k === S.esc ? 'eleg' : ''}"><td class="txt">${k[0].toUpperCase() + k.slice(1)}</td><td>${nf(1).format(x.infl_mensual)}&nbsp;%</td><td>${nf(1).format(x.infl_anual)}&nbsp;%</td><td>${MP(x.ventas_2027, 0)}</td><td>${P(x.crec_nominal)}</td><td>${P(x.efecto_precio)}</td><td>${MP(x.contrib_2027, 0)}</td></tr>`;
+  }
+  $('tb-esc').innerHTML = t + '</tbody>';
+  $('n-esc').innerHTML = `<b>Bajo</b> = la inflación que supuso el presupuesto 2026 (${nf(1).format(ESC.bajo.infl_mensual)} %), que resultó corta. <b>Base</b> = el promedio de los últimos 3 meses. <b>Alto</b> = el promedio de los últimos 12 meses. ` +
+    `En moneda constante las tres dan lo mismo: ventas ${MP(R.v27_const, 0)} y contribución ${MP(R.c27_const, 0)} (pesos de oct-26). Rango 80 % de las ventas en el escenario base: ${MP(ESC.base.ventas_2027_i[0], 0)} a ${MP(ESC.base.ventas_2027_i[1], 0)}.`;
+}
+
+// ------------------------------------------------------------------ (g) decisiones, glosario, limitaciones
+function textos() {
+  const pc = BTC[D.modo_contribucion];
+  $('decisiones').innerHTML = [
+    `<b>Armar el presupuesto 2027 en moneda constante y reinflarlo con un IPC explícito.</b> El de 2026 mezcló dos supuestos y erró los dos: ${P(BT.ppto.anual_sesgo_red)} de volumen de más y ${P(R.infl_supuesta_ppto_12m, false)} de inflación contra ${P(R.infl_ultimos_12m, false)}. Base en volumen: ${MP(R.v27_const, 0)} (plano). No suponer crecimiento de clientes sin una acción que lo explique: en los locales sin problemas los tickets crecieron ${P(R.tickets_yoy)} y el ticket promedio real cayó ${P(R.ticket_real_yoy)}.`,
+    `<b>Pedir explicación solo donde hay señal.</b> L03 (obra) y L10 (rotura) ya pasaron. <b>L07 sigue</b>: su margen cayó de ${P(R.l07_margen_2025, false)} a ${P(R.l07_margen_2027, false)} por la rotación de personal; arreglarlo vale ${MP(R.l07_valor_2027, 0)} de contribución en 2027. Los demás desvíos contra presupuesto son el sesgo del presupuesto, no la gestión del local.`,
+    `<b>Revisar la política de precios.</b> La carta se actualiza con un mes de atraso: en moneda constante el ticket pierde alrededor de ${P(-R.ticket_real_yoy, false)} por año, y eso explica casi toda la caída de la venta real. Y presupuestar la contribución con una reserva: aun con buen método, en 2026 la real quedó ${P(pc.anual_sesgo_red, false)} abajo de lo pronosticado, porque los problemas operativos no se pronostican pero pasan.`,
+  ].map(x => `<li>${x}</li>`).join('');
+
+  const iv = D.incertidumbre_ventas;
+  $('glosario').innerHTML = [
+    ['Moneda constante', 'Todo expresado en pesos de octubre de 2026, sacando la inflación. Si la venta en moneda constante no crece, vendimos lo mismo aunque haya más pesos.'],
+    ['Backtest', 'Hacer de cuenta que estamos en el pasado: pronosticar con lo que se sabía entonces y comparar con lo que pasó después. Es la única forma honesta de saber si un método sirve.'],
+    ['Error (WAPE)', `Cuánto se equivoca el pronóstico, en % de lo real, sin importar si es para arriba o para abajo. ${P(ELEG.anual_wape_red, false)} quiere decir que en un mes de $ 1.500 M el error típico es de unos ${M(1500 * ELEG.anual_wape_red, 0)}.`],
+    ['Sesgo', 'Si el error va siempre para el mismo lado. Un pronóstico puede tener poco error y sesgo cero; el presupuesto tuvo error alto y todo sesgo: siempre de más.'],
+    ['Rango probable (80 %)', `El pronóstico no es un número sino una zona: 8 de cada 10 meses deberían caer adentro. Sale de los errores del backtest (±${P(1.2816 * iv.corto, false)} a 1-3 meses en la red).`],
+    ['Bandas de control', 'El "ruido normal" de un local. Si un mes sale de la banda, o varios meses seguidos se van para el mismo lado, es señal: vale preguntar. Si no, es ruido: explicarlo es perder el tiempo.'],
+  ].map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+
+  $('limites').innerHTML = [
+    `Hay <b>24 meses de historia</b>: cada mes del año se vio solo dos veces. Por eso la estacionalidad se estima por tipo de local (urbano y ruta) y no local por local, y la tendencia se estima solo con 18 meses o más.`,
+    `El backtest cubre <b>un solo año</b> (2026), que tuvo tres problemas operativos. Otro año podría dar errores distintos.`,
+    `<b>Nov-dic 2027</b> (meses 13 y 14) no tienen respaldo en el backtest, que llega a 12 meses: la banda podría quedar corta.`,
+    `El rango no incluye la incertidumbre de la inflación (para eso están los escenarios) ni shocks como otra obra o una apertura: supone que el error futuro se parece al pasado.`,
+    `Supone que <b>L07 sigue igual</b>, que no abren ni cierran locales y que los precios mantienen el atraso de 2026. L05 tiene solo 6 meses después de su rampa de apertura.`,
+    `El presupuesto de <b>nov-dic 2026</b> no está en los datos: se completó con los supuestos del propio presupuesto (mismo patrón de nov y dic de 2025 y ${nf(1).format(1.6)}&nbsp;% de inflación mensual).`,
+    `Datos ficticios con problemas plantados: sirve para mostrar el método; los números no describen ninguna empresa real.`,
+  ].map(x => `<li>${x}</li>`).join('');
+  $('pie-gen').textContent = `Tablero generado el ${GEN} con ${D.metodo_elegido_nombre.toLowerCase()} como método.`;
+}
+
+// ------------------------------------------------------------------ armado y eventos
+const sel = $('f-local');
+sel.innerHTML = `<option value="red">Toda la red</option>` + D.locales.map(l => `<option value="${l.id}">${l.id} ${esc(l.nombre)}</option>`).join('');
+sel.addEventListener('change', () => { S.local = sel.value; graficoPron(); });
+const grupo = (attr, clave, fn) => document.querySelectorAll(`[data-${attr}]`).forEach(b => b.addEventListener('click', () => {
+  S[clave] = b.dataset[attr];
+  document.querySelectorAll(`[data-${attr}]`).forEach(x => x.setAttribute('aria-pressed', x === b));
+  fn();
+}));
+grupo('ind', 'ind', graficoPron); grupo('mon', 'mon', graficoPron); grupo('band', 'band', bandas); grupo('esc', 'esc', inflacion);
+function todo() { cabecera(); graficoPron(); backtest(); bandas(); inflacion(); textos(); }
+todo();
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { graficoPron(); bandas(); inflacion(); }, 150); });
+</script>
+</body>
+</html>

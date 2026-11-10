@@ -23,6 +23,17 @@ Leadership sees the contribution variance against budget and the store ranking, 
 
 ▶ [Dashboard](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/05_cadena-multisucursal/03_tableros/tablero_direccion.html) · ▶ [Login demo](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/05_cadena-multisucursal/03_tableros/demo_login.html) · [Case docs](casos/05_cadena-multisucursal/)
 
+### Forecasting with method · how good is the forecast?
+
+![Forecast with prediction range](casos/06_pronostico-con-metodo/03_tableros/captura_tablero.png)
+
+Year-end 2026 landing and the baseline for the 2027 budget of the same chain. Before choosing a method, it tests it against the past:
+- **Backtest:** the chosen method misses by 2.1 % per month when forecasting a full year. The budget missed by 6.7 %, always on the high side.
+- **Price vs volume:** in constant currency, 2027 is flat. All growth in pesos is inflation, shown under three scenarios.
+- **Noise or signal:** control bands per store. With a fixed ±5 % rule almost everything needed explaining; with the bands, the three real problems stand out.
+
+▶ [Dashboard](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/06_pronostico-con-metodo/03_tableros/pronostico.html) · [Method notes (Spanish)](casos/06_pronostico-con-metodo/07_docs/metodo_y_criterios.md)
+
 ### Front-line feedback · is it the market or management?
 
 A one-minute form for delivery drivers and customer service, with fixed categories, crossed with sales by route. It separates market-driven drops (every route reports "customer economic situation") from route-specific ones (a single route reports "competition"). An Apps Script builds the Monday summary and alert.
