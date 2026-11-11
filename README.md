@@ -94,8 +94,8 @@ python data/generate_synthetic_data.py                               # distribut
 
 ## How it was built
 
-- **My part:** the business question, the data model, the metrics and their rules (materiality threshold, constant currency, peer comparison), the design of each dashboard and the validation of every number.
-- **AI-assisted:** the supporting code (Python, JavaScript, Apps Script) was written with AI from those rules. Each case ships a checks script (`validar_datos.py`) that verifies the numbers tie out.
+- **My part:** the business question each case answers, the choice of rules (materiality threshold, constant currency, peer comparison) and the review of every number.
+- **Built with AI:** the code (Python, JavaScript, Apps Script), the dashboards and the Power BI project were written with AI from those rules. Each case ships a checks script (`validar_datos.py`) that verifies the numbers tie out.
 - **Data:** all synthetic, with planted situations so the analysis has something to find. No figure comes from a real company.
 
 ## Contact

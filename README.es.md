@@ -94,8 +94,8 @@ python data/generate_synthetic_data.py                               # dataset d
 
 ## Cómo está hecho
 
-- **Lo mío:** la pregunta de negocio, el modelo de datos, los indicadores y sus criterios (umbral, moneda constante, comparación contra pares), el diseño de cada tablero y la validación de cada número.
-- **Con asistencia de IA:** el código de apoyo (Python, JavaScript, Apps Script) se escribió con IA a partir de esas reglas. Cada caso trae un script de controles (`validar_datos.py`) que verifica que los números cierren.
+- **Lo mío:** qué pregunta de negocio responde cada caso, la elección de los criterios (umbral de materialidad, moneda constante, comparación contra pares) y la revisión de cada número.
+- **Con IA:** el armado. El código (Python, JavaScript, Apps Script), los tableros y el proyecto de Power BI se escribieron con IA a partir de esos criterios. Cada caso trae un script de controles (`validar_datos.py`) que verifica que los números cierren.
 - **Datos:** todos ficticios, con situaciones plantadas para que el análisis tenga algo que encontrar. Ninguna cifra viene de una empresa real.
 
 ## Contacto
