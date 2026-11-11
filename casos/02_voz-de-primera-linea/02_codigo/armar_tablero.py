@@ -34,8 +34,22 @@ def datos_para_tablero(d):
         "comp_ref": round(float(d["ref"][(rc, CAT_COMP)]), 1),
         "comp_rec": round(float(d["rec"][(rc, CAT_COMP)]), 1),
     }
+    sc, pr = d["sem_comp"], d["primera"]
+    desde = [x for x in d["semanas"] if x >= pr]
+    antes = [x for x in d["semanas"] if x < pr]
+    roles = d["r"][(d["r"]["ruta"] == rc) & (d["r"]["categoria"] == CAT_COMP) & (d["r"]["semana"] >= pr)]["rol"].value_counts()
+    alerta.update({
+        "n_desde": int(sc[rc].loc[desde].sum()),
+        "sem_desde": len(desde), "sem_3_desde": int((sc[rc].loc[desde] >= 3).sum()),
+        "sem_antes": len(antes), "sem_3_antes": int((sc[rc].loc[antes] >= 3).sum()),
+        "max_otras": int(sc.drop(columns=[rc]).loc[desde].max().max()),
+        "roles": {k: int(v) for k, v in roles.items()},
+    })
+    e = d["econ_sem"]
+    econ_ref = float(e.loc[[x for x in d["semanas"] if x < 9]].mean())
+    econ_rec = float(e.loc[list(SEM_RECIENTE)].mean())
     return {"titular": d["titular"], "semanas": d["semanas"], "rutas": rutas, "ranking": rank,
-            "alerta": alerta, "econ_sem": [int(d["econ_sem"].loc[s]) for s in d["semanas"]],
+            "alerta": alerta, "econ_ref": round(econ_ref, 1), "econ_rec": round(econ_rec, 1), "econ_sem": [int(d["econ_sem"].loc[s]) for s in d["semanas"]],
             "mercado_var": round(float(d["por_ruta"]["mercado"].iloc[0]) * 100, 1),
             "total_var": round(float(d["total_var"]) * 100, 1)}
 
@@ -62,6 +76,14 @@ header h1{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var
 .alerta{border-left:5px solid var(--comp)}
 .alerta h2{color:var(--comp)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.al-g{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.al-g>div{min-width:0}
+.azar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.azar div{background:#fbf3f3;border-radius:8px;padding:10px 12px;min-width:0}
+.azar b{display:block;font-size:20px;color:var(--comp)}
+.azar span{font-size:12px;color:var(--ink2)}
+.regla{font-size:12px;color:var(--muted);margin:10px 0 0}
+.lectura{font-size:13px;color:var(--ink2);border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
 .leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-bottom:8px}
 .leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
 .row{display:grid;grid-template-columns:110px 64px 1fr;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
@@ -79,7 +101,7 @@ header h1{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var
 svg{width:100%;height:auto;display:block}
 svg text{fill:var(--ink2);font-size:11px}
 .foot{font-size:12px;color:var(--muted);text-align:center;margin:18px 0 8px}
-@media(max-width:640px){.grid2{grid-template-columns:1fr}.row{grid-template-columns:86px 56px 1fr}.titular{font-size:17px}main{padding:12px}}
+@media(max-width:640px){.grid2,.al-g{grid-template-columns:1fr}.azar{grid-template-columns:1fr 1fr}.row{grid-template-columns:86px 56px 1fr}.titular{font-size:17px}main{padding:12px}}
 </style>
 </head>
 <body>
@@ -154,15 +176,22 @@ function chartAlerta() {
     if (i === pk || i === W - 1) s2 += `<text x="${cx(i)}" y="${t2 + ph2 - bh - 3}" text-anchor="middle" style="fill:var(--comp);font-weight:700">${A.comp_sem[i]}</text>`;
     s2 += `<text x="${cx(i)}" y="${h2 - 3}" text-anchor="middle" style="fill:var(--muted)">${i + 1}</text>`;
   }
-  s2 += marca(h2, 12, t2 + ph2) + `<text x="${l + (A.primera - 1) * bw + 4}" y="10" style="fill:var(--comp)">semana ${A.primera}: aparece la competencia</text></svg>`;
+  s2 += marca(h2, 12, t2 + ph2) + `<text x="${l + (A.primera - 1) * bw - 4}" y="10" text-anchor="end" style="fill:var(--comp)">semana ${A.primera}: aparece la competencia</text></svg>`;
   const tt = t => `<h3 style="font-size:13px;margin:10px 0 2px;color:var(--ink2)">${t}</h3>`;
-  return `<div style="max-width:620px">` + tt("Ventas de la Ruta 5 (base 100 = semanas 1 a 5)") + s1 + tt("Reportes de competencia por semana") + s2 + `<div style="font-size:11px;color:var(--muted);text-align:center">Semana</div></div>`;
+  return `<div class="al-g"><div>` + tt(`Ventas de la ${A.ruta.split(" - ")[0]} (base 100 = semanas 1 a 5)`) + s1 + `</div><div>` + tt("Reportes de competencia por semana") + s2 + `</div></div>`;
 }
 $("alerta").innerHTML = `
   <h2>Alerta: ${A.ruta}, competencia nueva</h2>
   <p class="sub">Los reportes de "Competencia nueva en la zona" pasaron de ${f1(A.comp_ref)} a ${f1(A.comp_rec)} por semana desde la semana ${A.primera}.
   Es la única ruta donde pasa: la venta cae ${f1(Math.abs(A.var))} %, ${f1(Math.abs(A.local))} puntos más que el mercado. Es gestión local.</p>
-  ${chartAlerta()}`;
+  ${chartAlerta()}
+  <div class="azar">
+    <div><b>${A.n_desde}</b><span>reportes de competencia en ${A.sem_desde} semanas</span></div>
+    <div><b>${A.sem_3_desde} de ${A.sem_desde}</b><span>semanas con 3 o más (antes: ${A.sem_3_antes} de ${A.sem_antes})</span></div>
+    <div><b>${Object.keys(A.roles).length} roles</b><span>lo reportan: ${Object.entries(A.roles).map(([k, v]) => `${k.toLowerCase()} ${v}`).join(", ")}</span></div>
+    <div><b>${A.max_otras}</b><span>máximo semanal en cualquier otra ruta</span></div>
+  </div>
+  <p class="regla">¿Puede ser azar? Un reporte suelto sí; esto no: se repite todas las semanas, lo dicen ${Object.keys(A.roles).length} roles distintos, no pasa en otras rutas y coincide con la caída de la venta. Regla de alerta semanal (la misma del Apps Script): al menos 4 reportes y el doble del promedio de las 4 semanas anteriores.</p>`;
 
 // ---- ventas por ruta contra reportes ----
 const maxTot = Math.max(...D.rutas.map(r => r.comp + r.econ + r.otros));
@@ -196,7 +225,7 @@ $("rank").innerHTML = D.ranking.map(x => `
     s += `<rect x="${x + 3}" y="${t + ph - bh}" width="${bw - 6}" height="${bh}" rx="2" fill="var(--econ)" opacity="${i + 1 >= 9 ? 1 : .4}"/>
       <text x="${x + bw / 2}" y="${t + ph - bh - 3}" text-anchor="middle">${v}</text><text x="${x + bw / 2}" y="${h - 8}" text-anchor="middle">${i + 1}</text>`;
   });
-  $("econ").innerHTML = s + "</svg>";
+  $("econ").innerHTML = s + "</svg>" + `<p class="lectura">Pasan de ${f1(D.econ_ref)} por semana (semanas 1 a 8) a ${f1(D.econ_rec)} (9 a 12) y suben en casi todas las rutas. <b>Es mercado:</b> no se le pide explicación a una ruta; se ajusta el pronóstico de venta y se revisa la política de crédito a clientes.</p>`;
 })();
 </script>
 </body>
