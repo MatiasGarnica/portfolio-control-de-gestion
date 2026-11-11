@@ -1,0 +1,5 @@
+/// Carpeta donde están los CSV del caso (01_datos). Si la moviste, cambiala en Transformar datos > Editar parámetros.
+expression CarpetaDatos = "C:\portfolio-control-de-gestion\casos\01_bpo-cobranzas\01_datos\" meta [IsParameterQuery = true, Type = "Text", IsParameterQueryRequired = true]
+
+	annotation PBI_ResultType = Text
+

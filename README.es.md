@@ -10,6 +10,19 @@ Todo lo que hay acá usa **datos ficticios** generados con scripts incluidos en 
 
 ## Casos
 
+### Empresa de cobranzas (BPO) · ¿cerramos el año y qué cartera gana plata?
+
+![Tablero de control de gestión](casos/01_bpo-cobranzas/03_tableros/captura_tablero.png)
+
+Control de gestión completo de una empresa de cobranzas con 12 carteras de clientes:
+- **Puente del desvío de ingresos:** separa lo que depende de la gestión (recupero, fee) de lo que no (inflación de la deuda, dólar, volumen que asigna el cliente).
+- **Margen por cartera** después de repartir los costos compartidos por driver (posiciones, minutos, envíos, pagos): una cartera puede facturar mucho y perder plata.
+- **Cierre del año** con simulador (inflación, paritaria, dólar, recupero, volumen) y **presupuesto del año siguiente** mes a mes, que se baja a un Excel con fórmulas vivas.
+- **Cotizador:** fee y recupero de equilibrio para una cartera nueva.
+- **Versión Power BI** en proyecto de texto (PBIP): modelo estrella y 189 medidas DAX documentadas.
+
+▶ [Ver el tablero](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/01_bpo-cobranzas/03_tableros/control_gestion_bpo.html) · [Power BI](casos/01_bpo-cobranzas/05_powerbi/) · [Documentación del caso](casos/01_bpo-cobranzas/)
+
 ### Cadena con 12 locales · del desvío de la red a la causa en tres clics
 
 ![Tablero de dirección](casos/05_cadena-multisucursal/03_tableros/captura_tablero.png)

@@ -1,0 +1,112 @@
+/// Indicadores de operación por escenario y mes: tipo de cambio, dotación, horas y costos unitarios.
+table KPI
+
+	column esc
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: esc
+
+		annotation SummarizationSetBy = Automatic
+
+	column mes
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: mes
+
+		annotation SummarizationSetBy = Automatic
+
+	column tc
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: tc
+
+		annotation SummarizationSetBy = Automatic
+
+	column operadores
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: operadores
+
+		annotation SummarizationSetBy = Automatic
+
+	column posiciones_py
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: posiciones_py
+
+		annotation SummarizationSetBy = Automatic
+
+	column posiciones_total
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: posiciones_total
+
+		annotation SummarizationSetBy = Automatic
+
+	column horas
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: horas
+
+		annotation SummarizationSetBy = Automatic
+
+	column costo_operador
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: costo_operador
+
+		annotation SummarizationSetBy = Automatic
+
+	column costo_sms
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: costo_sms
+
+		annotation SummarizationSetBy = Automatic
+
+	column costo_minuto
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: costo_minuto
+
+		annotation SummarizationSetBy = Automatic
+
+	column indice_precios
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: indice_precios
+
+		annotation SummarizationSetBy = Automatic
+
+	column indice_salarial
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: indice_salarial
+
+		annotation SummarizationSetBy = Automatic
+
+	partition KPI = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents(CarpetaDatos & "fact_kpi_operacion.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Encabezados = Table.PromoteHeaders(Origen, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Encabezados, {{"esc", type text}, {"mes", type text}, {"tc", type number}, {"operadores", type number}, {"posiciones_py", type number}, {"posiciones", type number}, {"horas", type number}, {"costo_operador", type number}, {"costo_sms", type number}, {"costo_minuto", type number}, {"indice_precios", type number}, {"indice_salarial", type number}}, "en-US"),
+				    Final = Table.RenameColumns(Tipos, {{"posiciones", "posiciones_total"}})
+				in
+				    Final
+
+	annotation PBI_ResultType = Table
+

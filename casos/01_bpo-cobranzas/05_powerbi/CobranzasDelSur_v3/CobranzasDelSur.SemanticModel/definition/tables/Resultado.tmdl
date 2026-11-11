@@ -1,0 +1,65 @@
+/// Estado de resultados de gestión por escenario, mes, cartera e ítem. Ingresos en positivo, costos en negativo.
+table Resultado
+
+	column esc
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: esc
+
+		annotation SummarizationSetBy = Automatic
+
+	column mes
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: mes
+
+		annotation SummarizationSetBy = Automatic
+
+	column cartera
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: cartera
+
+		annotation SummarizationSetBy = Automatic
+
+	column item_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: item_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column importe_ars
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: importe_ars
+
+		annotation SummarizationSetBy = Automatic
+
+	column importe_usd
+		dataType: double
+		isHidden
+		summarizeBy: none
+		sourceColumn: importe_usd
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Resultado = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents(CarpetaDatos & "fact_resultado.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Encabezados = Table.PromoteHeaders(Origen, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Encabezados, {{"esc", type text}, {"mes", type text}, {"cartera", type text}, {"item_id", Int64.Type}, {"importe_ars", type number}, {"importe_usd", type number}}, "en-US"),
+				    Final = Table.SelectColumns(Tipos, {"esc", "mes", "cartera", "item_id", "importe_ars", "importe_usd"})
+				in
+				    Final
+
+	annotation PBI_ResultType = Table
+

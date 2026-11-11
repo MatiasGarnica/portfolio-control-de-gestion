@@ -34,3 +34,6 @@ desktop.ini
 output/
 temp/
 *.log
+
+# Caso 01: los CSV del modelo van en el repo (Power BI los lee)
+!casos/01_bpo-cobranzas/01_datos/*.csv
