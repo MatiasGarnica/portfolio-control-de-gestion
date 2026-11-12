@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Costo de servir por cliente</title>
+<meta name="description" content="Caso 07 · Costo de servir: qué cliente deja plata después de lo que cuesta prepararle, llevarle, financiarle y recibirle devoluciones. Empresa y datos ficticios.">
+<style>
+:root {
+  color-scheme: light;
+  --page: #eef2f1; --surface: #ffffff; --ink: #0b0b0b; --ink2: #4d5552; --muted: #737b78;
+  --grid: #e5ebe9; --axis: #c3c9c6; --border: #d4dcd9; --thead: #f2f6f5; --zebra: #fafcfb;
+  --brand: #0f4c47; --brand2: #13796f;
+  --pos: #0f7a2e; --neg: #c53030; --tot: #5b6b85; --line: #13796f;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --chip-bad: #fde8e8; --chip-warn: #fdf3df; --chip-ok: #e8f5ec;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+h2 { font-size: 18px; margin: 0; font-weight: 650; }
+h3 { font-size: 14px; margin: 0 0 6px; font-weight: 650; color: var(--ink2); }
+p { margin: 6px 0; }
+.sub { color: var(--ink2); font-size: 13px; }
+button, select { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; min-height: 36px; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--brand2); outline-offset: 2px; }
+header.marca { border-radius: 14px; padding: 16px 18px; color: #fff; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: linear-gradient(120deg, var(--brand), var(--brand2)); box-shadow: 0 4px 14px rgba(16,24,40,.12); }
+header.marca .sub { color: rgba(255,255,255,.9); }
+.marca-id { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.logo { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.16); }
+.logo svg { width: 30px; height: 30px; }
+.corte { font-size: 13px; background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 12px; }
+section { margin-top: 30px; }
+.nivel { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; border-left: 4px solid var(--brand2); padding-left: 10px; }
+.nivel .tag { font-size: 12px; font-weight: 650; color: var(--brand); text-transform: uppercase; letter-spacing: .04em; }
+.card, .tile, .titular { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.05), 0 3px 8px rgba(16,24,40,.06); min-width: 0; }
+.titular { padding: 16px 18px; margin-top: 16px; font-size: 16px; line-height: 1.55; }
+.titular b { font-weight: 650; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin-top: 14px; }
+.tile { padding: 12px 14px; border-top: 3px solid var(--brand2); }
+.tile .k { font-size: 13px; color: var(--ink2); }
+.tile .v { font-size: clamp(19px, 2.1vw, 23px); font-weight: 650; margin: 2px 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tile .d { font-size: 12.5px; color: var(--ink2); line-height: 1.5; }
+.card { padding: 14px; }
+.ctrl { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+.ctrl label { font-size: 13px; color: var(--ink2); display: flex; gap: 6px; align-items: center; }
+.leyenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); margin: 2px 0 6px; }
+.leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+svg { display: block; overflow: visible; max-width: 100%; height: auto; }
+svg text { font-family: inherit; font-size: 12px; fill: var(--ink2); }
+svg text.v { fill: var(--ink); font-variant-numeric: tabular-nums; }
+.nota { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.scroll.alto { max-height: 460px; overflow-y: auto; }
+.scroll table { min-width: 640px; }
+.scroll table.ancha { min-width: 860px; }
+.scroll table.chica { min-width: 0; }
+.desc { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); white-space: normal; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; font-size: 12px; background: var(--thead); white-space: normal; position: sticky; top: 0; z-index: 1; }
+th:first-child, td:first-child { text-align: left; }
+td.txt, th.txt { text-align: left; white-space: normal; font-variant-numeric: normal; }
+tbody tr:nth-child(even) td { background: var(--zebra); }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover td { background: #e9f4f2; }
+tr.sel td { background: #dff0ec !important; font-weight: 600; }
+tr.tot td { font-weight: 650; border-top: 2px solid var(--axis); }
+.neg { color: var(--neg); } .pos { color: var(--pos); }
+.chip { display: inline-block; font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chip.bad { background: var(--chip-bad); color: #9b1c1c; }
+.chip.warn { background: var(--chip-warn); color: #7a4a00; }
+.chip.ok { background: var(--chip-ok); color: #135c2a; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sim { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 18px; }
+.sim label { display: grid; gap: 3px; font-size: 13px; color: var(--ink2); }
+.sim label b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.sim input[type=range] { width: 100%; accent-color: var(--brand2); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.kpi { background: var(--thead); border-radius: 10px; padding: 10px 12px; }
+.kpi .k { font-size: 12px; color: var(--ink2); }
+.kpi .v { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.lectura { background: #f3faf8; border: 1px solid #cfe7e1; border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+.flujo { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.flujo div { background: var(--thead); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; }
+.flujo b { display: block; font-size: 12px; color: var(--brand); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.tip { position: fixed; pointer-events: none; background: #111; color: #fff; font-size: 12.5px; padding: 6px 9px; border-radius: 6px; z-index: 30; max-width: 280px; line-height: 1.4; }
+footer { margin-top: 36px; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="marca">
+  <div class="marca-id">
+    <div class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M3 9h15v12H3zM18 13h6l4 4v4h-10z"/><circle cx="8" cy="23" r="2.5" fill="#0f4c47"/><circle cx="23" cy="23" r="2.5" fill="#0f4c47"/></svg></div>
+    <div><h1>Mayorista Ruta Sur · Costo de servir</h1><div class="sub">Qué cliente deja plata después de prepararle, llevarle, financiarle y recibirle devoluciones. Empresa y datos ficticios.</div></div>
+  </div>
+  <div class="corte" id="corte"></div>
+</header>
+
+<div class="titular" id="titular"></div>
+<div class="tiles" id="tiles"></div>
+
+<section>
+  <div class="nivel"><span class="tag">1 · La empresa</span><h2>Del margen bruto al resultado</h2></div>
+  <div class="card"><div id="wfTot"></div><p class="nota">Miles de $ por mes, promedio de mayo a octubre de 2026 en moneda de octubre. La estructura (gerencia, administración, alquiler) no se asigna a clientes: no cambia si se atiende a uno más o a uno menos.</p></div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">2 · Los clientes</span><h2>Pocos clientes pagan por todos</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Curva de ballena: contribución acumulada, de mejor a peor cliente</h3><div id="ballena"></div><div id="ballenaL" class="nota"></div></div>
+    <div class="card"><h3>Pedidos chicos, contribución baja: cada punto es un cliente</h3><div class="leyenda" id="leyTipos"></div><div id="disp"></div><p class="nota">Bultos por pedido en escala logarítmica. Pasá el mouse por un punto para ver el cliente.</p></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>Por tipo de cliente</h3><div class="scroll"><table id="tTipos"></table></div><div class="lectura" id="lTipos"></div></div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">3 · El ranking</span><h2>Margen bruto contra contribución, cliente por cliente</h2></div>
+  <div class="card">
+    <div class="ctrl">
+      <label>Tipo <select id="fTipo"></select></label>
+      <label>Zona <select id="fZona"></select></label>
+      <label><input type="checkbox" id="fNeg"> Solo los que pierden</label>
+      <span class="sub" id="fCuenta"></span>
+    </div>
+    <div class="scroll alto"><table class="ancha" id="tRank"></table></div>
+    <p class="nota">Tocá un cliente para ver su detalle. «Puesto» compara el lugar por margen bruto con el lugar por contribución.</p>
+  </div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">4 · Un cliente</span><h2 id="detT">Detalle</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>Del margen bruto a la contribución · miles de $ por mes</h3><div id="wfCli"></div></div>
+    <div class="card"><h3>Qué lo encarece, contra el promedio de su tipo</h3><div class="scroll"><table class="chica" id="tCli"></table></div><div class="lectura" id="lCli"></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">5 · El error común</span><h2>El prorrateo por ventas esconde a todos los que pierden</h2></div>
+  <div class="card"><div class="leyenda"><span><i style="background:#fff;border:2px solid var(--muted)"></i>Prorrateado por ventas</span><span><i style="background:var(--neg)"></i>Por actividad</span></div><div id="prorr"></div><div class="lectura" id="lProrr"></div></div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">6 · Las palancas</span><h2>Qué pasa si cambiamos cómo se atiende</h2></div>
+  <div class="card">
+    <div class="sim">
+      <label>Pedido mínimo: <b id="vMin"></b><input type="range" id="sMin" min="0" max="20" step="1" value="0"></label>
+      <label>Ventas que se pierden en los clientes afectados: <b id="vPerd"></b><input type="range" id="sPerd" min="0" max="30" step="1" value="5"></label>
+      <label>Cargo por pedido urgente: <b id="vUrg"></b><input type="range" id="sUrg" min="0" max="60" step="5" value="0"></label>
+      <label>Plazo máximo de cobro: <b id="vPlazo"></b><input type="range" id="sPlazo" min="15" max="60" step="15" value="60"></label>
+    </div>
+    <div class="kpis" id="simK"></div>
+    <div class="lectura" id="simL"></div>
+    <p class="nota">El ahorro de preparación y reparto es potencial: se cobra si se ajusta la capacidad (un camión menos, menos horas extra). Con el cargo por urgente se supone que los urgentes bajan a la mitad.</p>
+  </div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">7 · El método</span><h2>De dónde sale cada tasa, y qué pasa si cambia el criterio</h2></div>
+  <div class="grid2">
+    <div class="card"><h3>De la cuenta contable a la tasa</h3><div class="scroll" id="tTasas"></div><p class="nota">Tasa = costo de la actividad ÷ cantidad del driver en el mes. Financiamiento: saldo (ventas × días ÷ 30) × 3 % mensual. Devoluciones: 30 % de lo devuelto.</p></div>
+    <div class="card"><h3>Sensibilidad: ¿la conclusión depende del criterio?</h3>
+      <div class="sim" style="grid-template-columns:1fr">
+        <label>Parte del depósito que es fija por pedido: <b id="vPP"></b><input type="range" id="sPP" min="30" max="80" step="5" value="55"></label>
+        <label>Parte del reparto que es tiempo en la parada: <b id="vRP"></b><input type="range" id="sRP" min="30" max="70" step="5" value="50"></label>
+        <label>Costo del dinero, mensual: <b id="vFin"></b><input type="range" id="sFin" min="1" max="5" step="0.5" value="3"></label>
+      </div>
+      <div class="kpis" id="senK"></div><div class="lectura" id="senL"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="nivel"><span class="tag">8 · En una empresa real</span><h2>Cómo se arma en una distribuidora chica</h2></div>
+  <div class="card"><div class="flujo">
+    <div><b>Semana 1 y 2 · Relevar</b>Cronometrar unos 50 pedidos en el depósito (cuánto es fijo y cuánto por bulto). Km de desvío de cada cliente con un mapa. Días de cobro de la cuenta corriente.</div>
+    <div><b>Semana 3 · Tasas</b>Pasar el estado de resultados a actividades y dividir por el driver. Una planilla alcanza.</div>
+    <div><b>Todos los meses · Ranking</b>Facturas, hoja de ruta y cobranzas del mes: el ranking se actualiza solo. Las tasas se revisan cada trimestre.</div>
+    <div><b>Decidir · Por cliente</b>Pedido mínimo o visita semanal a los que piden poco y seguido; cargo por urgente; plazo; precio. Ningún cliente se pierde sin mirar su palanca primero.</div>
+  </div></div>
+</section>
+
+<footer>Caso 07 del portfolio de control de gestión · Empresa, clientes y números ficticios · Generado el /*__GENERADO__*/ · Sin librerías externas.</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const R = /*__DATOS__*/null;
+const $ = s => document.querySelector(s);
+const nf = d => new Intl.NumberFormat('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const m0 = v => nf(0).format(v), m1 = v => nf(1).format(v);
+const M = v => nf(1).format(v / 1000);                       // miles -> millones
+const pc = (v, d = 1) => nf(d).format(v * 100) + ' %';
+const sg0 = v => (v < 0 ? '−' : v > 0 ? '+' : '') + m0(Math.abs(v));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const TIPOS = ['Súper chico', 'Autoservicio', 'Almacén', 'Kiosco', 'Gastronomía'];
+const COL = { 'Súper chico': 'var(--s1)', 'Autoservicio': 'var(--s2)', 'Almacén': 'var(--s3)', 'Kiosco': 'var(--s4)', 'Gastronomía': 'var(--s5)' };
+const T = R.totales, P = R.pools, CR = R.meta.criterios;
+
+/* ---------- modelo (mismo cálculo que costo_servir.py) ---------- */
+const base = { pp: CR.prep_por_pedido, rp: CR.reparto_en_parada, fin: CR.tasa_fin, dev: CR.costo_dev, ku: CR.km_urgente };
+const kmCli = (c, ped, urg, ku) => ped * c.km_desvio + urg * c.km_desvio * ku;
+function tasas(cr) {
+  let ped = 0, bul = 0, vis = 0, km = 0;
+  R.clientes.forEach(c => { ped += c.pedidos; bul += c.bultos; vis += c.pedidos + c.urgentes; km += kmCli(c, c.pedidos, c.urgentes, cr.ku); });
+  return { pedido: P.prep * cr.pp / ped, bulto: P.prep * (1 - cr.pp) / bul, visita: P.rep * cr.rp / vis, km: (P.rep * (1 - cr.rp) + P.rep_km) / km };
+}
+function costear(c, t, cr, o = {}) {
+  const ped = o.pedidos ?? c.pedidos, urg = o.urgentes ?? c.urgentes, bul = o.bultos ?? c.bultos, dias = o.dias ?? c.dias_cobro,
+        ven = o.ventas ?? c.ventas, mb = o.mb ?? c.mb, dev = o.devoluciones ?? c.devoluciones;
+  const r = { prep: ped * t.pedido + bul * t.bulto, entrega: (ped + urg) * t.visita + kmCli(c, ped, urg, cr.ku) * t.km,
+              fin: ven * dias / 30 * cr.fin, dev: dev * cr.dev };
+  r.cts = r.prep + r.entrega + r.fin + r.dev; r.mb = mb; r.ventas = ven; r.contrib = mb - r.cts; r.visitas = ped + urg;
+  return r;
+}
+const T0 = tasas(base);
+
+/* ---------- tooltips ---------- */
+const tip = $('#tip');
+function tips(root) {
+  root.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('pointermove', e => { tip.innerHTML = el.dataset.tip; tip.hidden = false; tip.style.left = Math.min(e.clientX + 14, innerWidth - 290) + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
+    el.addEventListener('pointerleave', () => tip.hidden = true);
+  });
+}
+
+/* ---------- gráficos ---------- */
+function cascada(items, W = 760, H = 270) {
+  const L = 6, R_ = 6, Tp = 24, B = 44, n = items.length, bw = (W - L - R_) / n;
+  let run = 0, mx = 0, mn = 0;
+  items.forEach(it => { if (it.total) run = it.v; else run += it.v; mx = Math.max(mx, run, it.total ? it.v : 0); mn = Math.min(mn, run); });
+  const lo = Math.min(0, mn) * 1.1, hi = mx * 1.08, y = v => Tp + (H - Tp - B) * (1 - (v - lo) / (hi - lo));
+  let o = ''; run = 0;
+  items.forEach((it, i) => {
+    let a, b, col;
+    if (it.total) { a = 0; b = it.v; run = it.v; col = it.v < 0 ? 'var(--neg)' : 'var(--tot)'; } else { a = run; b = run + it.v; run = b; col = it.v >= 0 ? 'var(--pos)' : 'var(--neg)'; }
+    const x = L + i * bw + bw * .17, w = bw * .66, top = Math.min(y(a), y(b)), h = Math.max(2, Math.abs(y(a) - y(b)));
+    o += `<rect x="${x}" y="${top}" width="${w}" height="${h}" rx="3" fill="${col}" data-tip="${esc(it.l)}: ${m0(it.v)}${it.d ? '<br>' + it.d : ''}"/>`;
+    o += `<text class="v" x="${x + w / 2}" y="${top - 6}" text-anchor="middle">${it.total ? m0(it.v) : sg0(it.v)}</text>`;
+    o += `<text x="${x + w / 2}" y="${H - B + 16}" text-anchor="middle">${esc(it.l)}</text>`;
+    if (it.s) o += `<text x="${x + w / 2}" y="${H - B + 31}" text-anchor="middle" style="font-size:11px;fill:var(--muted)">${esc(it.s)}</text>`;
+    if (i < n - 1) o += `<line x1="${x + w}" x2="${x + bw}" y1="${y(run)}" y2="${y(run)}" stroke="var(--axis)" stroke-dasharray="3 3"/>`;
+  });
+  o += `<line x1="${L}" x2="${W - R_}" y1="${y(0)}" y2="${y(0)}" stroke="var(--axis)"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">${o}</svg>`;
+}
+function ballena() {
+  const W = 540, H = 300, L = 44, Rr = 14, Tp = 16, B = 34, pts = R.curva, mx = Math.max(...pts.map(p => p.y)) * 1.08,
+        x = v => L + (W - L - Rr) * v, y = v => Tp + (H - Tp - B) * (1 - v / mx);
+  let o = '';
+  [0, .25, .5, .75, 1, 1.25].filter(v => v <= mx).forEach(v => o += `<line x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${m0(v * 100)}%</text>`);
+  [0, .25, .5, .75, 1].forEach(v => o += `<text x="${x(v)}" y="${H - 12}" text-anchor="middle">${m0(v * 100)}%</text>`);
+  o += `<line x1="${L}" x2="${W - Rr}" y1="${y(1)}" y2="${y(1)}" stroke="var(--tot)" stroke-dasharray="4 4"/><text x="${L + 6}" y="${y(1) - 6}">Contribución total = 100 %</text>`;
+  o += `<path d="M${pts.map(p => x(p.x) + ',' + y(p.y)).join('L')}" fill="none" stroke="var(--line)" stroke-width="2"/>`;
+  const pk = T.pico;
+  o += `<circle cx="${x(pk.x)}" cy="${y(pk.y)}" r="5" fill="var(--line)" stroke="#fff" stroke-width="2"/><text class="v" x="${x(pk.x) - 8}" y="${y(pk.y) - 10}" text-anchor="end">${m0(pk.y * 100)}% con el ${m0(pk.x * 100)}% de los clientes</text>`;
+  const byId = Object.fromEntries(R.clientes.map(c => [c.id, c]));
+  pts.slice(1).forEach((p, i) => { const c = byId[p.id], w = (W - L - Rr) / (pts.length - 1);
+    o += `<rect x="${x(p.x) - w / 2}" y="${Tp}" width="${w}" height="${H - Tp - B}" fill="transparent" data-tip="#${i + 1} ${esc(c.n)}<br>Contribución ${m0(c.contrib)} · acumulado ${m0(p.y * 100)}%"/>`; });
+  o += `<text x="${L}" y="${H}" style="font-size:11px">% de clientes, ordenados por contribución →</text>`;
+  $('#ballena').innerHTML = `<svg viewBox="0 0 ${W} ${H + 6}" role="img">${o}</svg>`;
+  const neg = R.clientes.length - Math.round(pk.x * R.clientes.length);
+  $('#ballenaL').innerHTML = `Los mejores ${Math.round(pk.x * R.clientes.length)} clientes generan el ${m0(pk.y * 100)} % de la contribución; los últimos ${neg} se llevan ${m0((pk.y - 1) * 100)} puntos.`;
+}
+function dispersion() {
+  const W = 540, H = 300, L = 48, Rr = 12, Tp = 22, B = 34, xs = [1, 2, 5, 10, 20, 50, 100, 200], lx0 = Math.log(1.5), lx1 = Math.log(220),
+        x = v => L + (W - L - Rr) * (Math.log(v) - lx0) / (lx1 - lx0), lo = -.65, hi = .3, y = v => Tp + (H - Tp - B) * (1 - (Math.max(lo, v) - lo) / (hi - lo));
+  let o = '';
+  [-.6, -.4, -.2, 0, .2].forEach(v => o += `<line x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? 'var(--axis)' : 'var(--grid)'}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${m0(v * 100)}%</text>`);
+  xs.filter(v => v >= 1.5).forEach(v => o += `<text x="${x(v)}" y="${H - 14}" text-anchor="middle">${v}</text>`);
+  o += `<text x="${W - Rr}" y="${H}" text-anchor="end" style="font-size:11px">bultos por pedido →</text><text x="${L - 44}" y="${Tp - 4}" style="font-size:11px">contribución / ventas</text>`;
+  R.clientes.forEach(c => o += `<circle cx="${x(c.bxp)}" cy="${y(c.pct)}" r="5" fill="${COL[c.tipo]}" stroke="#fff" stroke-width="1.5" data-tip="${esc(c.n)} · ${c.tipo}<br>${m1(c.bxp)} bultos por pedido · ${m1(c.pedidos)} pedidos/mes<br>Contribución ${pc(c.pct)}"/>`);
+  $('#disp').innerHTML = `<svg viewBox="0 0 ${W} ${H + 6}" role="img">${o}</svg>`;
+  $('#leyTipos').innerHTML = TIPOS.map(t => `<span><i style="background:${COL[t]}"></i>${t}</span>`).join('');
+}
+
+/* ---------- secciones ---------- */
+function encabezado() {
+  $('#corte').textContent = 'May–oct 2026 · miles de $ por mes';
+  const negs = R.clientes.filter(c => c.contrib < 0);
+  const caro = [...R.clientes].filter(c => c.contrib < 0).sort((a, b) => a.rk_mb - b.rk_mb)[0];
+  $('#titular').innerHTML = `<b>${T.negativos} de ${R.meta.clientes} clientes no cubren lo que cuesta atenderlos: pierden $ ${M(-T.perdida_negativos)} M por mes</b> y venden el ${pc(T.ventas_negativos / T.ventas, 0)} del total. Atenderlos cuesta el ${pc(T.cts / T.ventas)} de las ventas, el ${pc(T.cts / T.mb, 0)} del margen bruto. El prorrateo por ventas, que es lo habitual, no muestra a ninguno. El caso más caro es ${esc(caro.n)}: ${caro.rk_mb}.º por margen bruto, pierde $ ${m0(-caro.contrib)} mil por mes entre urgentes, distancia y plazo.`;
+  const tl = [
+    ['Ventas', '$ ' + M(T.ventas) + ' M', `${R.meta.clientes} clientes, ${m0(T.pedidos)} pedidos por mes`],
+    ['Margen bruto', pc(T.mb / T.ventas), '$ ' + M(T.mb) + ' M'],
+    ['Costo de servir', pc(T.cts / T.ventas), `Preparación, reparto, financiamiento y devoluciones`],
+    ['Contribución', pc(T.contrib / T.ventas), '$ ' + M(T.contrib) + ' M antes de estructura'],
+    ['Clientes que pierden', T.negativos + ' de ' + R.meta.clientes, '$ ' + M(-T.perdida_negativos) + ' M por mes'],
+    ['Resultado', '$ ' + M(T.resultado) + ' M', pc(T.resultado / T.ventas) + ' de las ventas']
+  ];
+  $('#tiles').innerHTML = tl.map(([k, v, d]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+  $('#wfTot').innerHTML = cascada([
+    { l: 'Margen bruto', v: T.mb, total: true, s: pc(T.mb / T.ventas) },
+    { l: 'Preparación', v: -T.prep, s: pc(T.prep / T.ventas) }, { l: 'Reparto', v: -T.entrega, s: pc(T.entrega / T.ventas) },
+    { l: 'Financiamiento', v: -T.fin, s: pc(T.fin / T.ventas) }, { l: 'Devoluciones', v: -T.dev, s: pc(T.dev / T.ventas) },
+    { l: 'Contribución', v: T.contrib, total: true, s: pc(T.contrib / T.ventas) }, { l: 'Estructura', v: -T.estructura, s: pc(T.estructura / T.ventas) },
+    { l: 'Resultado', v: T.resultado, total: true, s: pc(T.resultado / T.ventas) }], 900, 290);
+}
+function porTipo() {
+  const rows = R.tipos.map(g => `<tr><td><span class="dot" style="background:${COL[g.nombre]}"></span>${g.nombre}</td><td>${m0(g.n)}</td><td>${m0(g.ventas)}</td><td>${pc(g.mb / g.ventas)}</td><td>${pc(g.prep / g.ventas)}</td><td>${pc(g.entrega / g.ventas)}</td><td>${pc(g.fin / g.ventas)}</td><td>${pc(g.dev / g.ventas)}</td><td class="${g.contrib < 0 ? 'neg' : ''}">${pc(g.contrib / g.ventas)}</td><td>${m1(g.bultos / g.pedidos)}</td><td>${g.neg ? `<span class="chip bad">${m0(g.neg)}</span>` : '<span class="chip ok">0</span>'}</td></tr>`).join('');
+  $('#tTipos').innerHTML = `<thead><tr><th>Tipo</th><th>Clientes</th><th>Ventas</th><th>Margen bruto</th><th>Preparación</th><th>Reparto</th><th>Financ.</th><th>Devol.</th><th>Contribución</th><th>Bultos por pedido</th><th>Pierden</th></tr></thead><tbody>${rows}</tbody>`;
+  const k = R.tipos.find(g => g.nombre === 'Kiosco'), s = R.tipos.find(g => g.nombre === 'Súper chico'), ga = R.tipos.find(g => g.nombre === 'Gastronomía');
+  $('#lTipos').innerHTML = `El orden se invierte: el kiosco tiene el mejor margen bruto (${pc(k.mb / k.ventas)}) y el súper el peor (${pc(s.mb / s.ventas)}), pero después de servir el súper deja ${pc(s.contrib / s.ventas)} y el kiosco ${pc(k.contrib / k.ventas)}. Gastronomía es el tipo con más clientes que pierden (${m0(ga.neg)} de ${m0(ga.n)}): pedidos urgentes fuera de ruta, devoluciones y plazo.`;
+}
+let selId = null;
+function ranking() {
+  const ft = $('#fTipo').value, fz = $('#fZona').value, fn = $('#fNeg').checked;
+  const list = R.clientes.filter(c => (!ft || c.tipo === ft) && (!fz || c.zona === fz) && (!fn || c.contrib < 0));
+  $('#fCuenta').textContent = `${list.length} clientes · contribución ${m0(list.reduce((a, c) => a + c.contrib, 0))}`;
+  $('#tRank').innerHTML = `<thead><tr><th>#</th><th class="txt">Cliente</th><th class="txt">Tipo</th><th class="txt">Zona</th><th>Ventas</th><th>Margen bruto</th><th>Costo de servir</th><th>Contribución</th><th>% ventas</th><th>Puesto MB → real</th></tr></thead><tbody>${list.map(c => {
+    const d = c.rk_mb - c.rk; return `<tr class="click${c.id === selId ? ' sel' : ''}" data-id="${c.id}"><td>${c.rk}</td><td class="txt">${esc(c.n)}</td><td class="txt"><span class="dot" style="background:${COL[c.tipo]}"></span>${c.tipo}</td><td class="txt">${c.zona}</td><td>${m0(c.ventas)}</td><td>${pc(c.mb_pct)}</td><td>${pc(c.cts / c.ventas)}</td><td class="${c.contrib < 0 ? 'neg' : ''}">${m0(c.contrib)}</td><td class="${c.contrib < 0 ? 'neg' : ''}">${pc(c.pct)}</td><td>${c.rk_mb} → ${c.rk} ${Math.abs(d) >= 15 ? `<span class="chip ${d < 0 ? 'bad' : 'ok'}">${d < 0 ? '▼' : '▲'} ${Math.abs(d)}</span>` : ''}</td></tr>`; }).join('')}</tbody>`;
+  $('#tRank').querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => { detalle(tr.dataset.id); ranking(); document.getElementById('detT').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+}
+function detalle(id) {
+  selId = id; const c = R.clientes.find(x => x.id === id), g = R.clientes.filter(x => x.tipo === c.tipo);
+  const avg = f => g.reduce((a, x) => a + f(x), 0) / g.length;
+  $('#detT').textContent = `${c.n} · ${c.tipo}, zona ${c.zona}`;
+  $('#wfCli').innerHTML = cascada([{ l: 'Margen bruto', v: c.mb, total: true, s: pc(c.mb_pct) },
+    { l: 'Preparación', v: -c.prep, d: `${m1(c.pedidos)} pedidos × ${m1(T0.pedido)} + ${m0(c.bultos)} bultos × ${nf(2).format(T0.bulto)}` },
+    { l: 'Reparto', v: -c.entrega, d: `${m1(c.pedidos + c.urgentes)} visitas × ${m1(T0.visita)} + km × ${nf(2).format(T0.km)}` },
+    { l: 'Financ.', v: -c.fin, d: `${c.dias_cobro} días de cobro` }, { l: 'Devol.', v: -c.dev, d: `${m0(c.devoluciones)} devueltos × 30 %` },
+    { l: 'Contribución', v: c.contrib, total: true, s: pc(c.pct) }], 620, 270);
+  const fil = [['Pedidos por mes', c.pedidos, avg(x => x.pedidos), 1, 1], ['Bultos por pedido', c.bxp, avg(x => x.bxp), 1, -1], ['Km de desvío por visita', c.km_desvio, avg(x => x.km_desvio), 1, 1],
+               ['Urgentes por mes', c.urgentes, avg(x => x.urgentes), 1, 1], ['Días de cobro', c.dias_cobro, avg(x => x.dias_cobro), 0, 1], ['Devoluciones / ventas', c.devoluciones / c.ventas, avg(x => x.devoluciones / x.ventas), 2, 1]];
+  $('#tCli').innerHTML = `<thead><tr><th>Driver</th><th>Este cliente</th><th>Promedio ${c.tipo.toLowerCase()}</th><th></th></tr></thead><tbody>${fil.map(([k, v, a, d, dir]) => { const peor = dir * (v - a) > Math.abs(a) * .2;
+    const f = d === 2 ? pc(v) : nf(d).format(v), fa = d === 2 ? pc(a) : nf(d).format(a); return `<tr><td>${k}</td><td>${f}</td><td>${fa}</td><td>${peor ? '<span class="chip warn">más caro</span>' : ''}</td></tr>`; }).join('')}</tbody>`;
+  const comp = [['reparto', c.entrega - avg(x => x.entrega / x.ventas) * c.ventas], ['preparación', c.prep - avg(x => x.prep / x.ventas) * c.ventas], ['financiamiento', c.fin - avg(x => x.fin / x.ventas) * c.ventas], ['devoluciones', c.dev - avg(x => x.dev / x.ventas) * c.ventas]].sort((a, b) => b[1] - a[1]);
+  const pal = { 'reparto': c.urgentes > 1 ? 'cobrar los urgentes o sumarlos a la ruta del día siguiente' : c.km_desvio > 15 ? 'visitarlo una vez por semana o con un pedido mínimo, por la distancia' : 'juntar pedidos: pasar a una visita semanal',
+                'preparación': 'pedido mínimo: pide poco y seguido', 'financiamiento': 'acortar el plazo o cobrar recargo por plazo', 'devoluciones': 'revisar por qué devuelve (pedido mal tomado, vencimientos) y cobrar el retiro' }[comp[0][0]];
+  $('#lCli').innerHTML = c.contrib < 0 ? `<b>Pierde $ ${m0(-c.contrib)} mil por mes.</b> Lo que más lo separa de su tipo es el ${comp[0][0]} (${sg0(comp[0][1])} contra el promedio). Palanca: ${pal}.` :
+    `Deja $ ${m0(c.contrib)} mil por mes (${pc(c.pct)} de lo que compra). ${comp[0][1] > 0 ? `Su costo más alto contra el tipo es el ${comp[0][0]}: ${pal}.` : 'Está mejor que su tipo en todos los drivers.'}`;
+}
+function prorrateo() {
+  const list = R.clientes.filter(c => c.contrib < 0).sort((a, b) => a.contrib - b.contrib);
+  const W = 760, rh = 26, Tp = 24, L = 200, Rr = 20, H = Tp + list.length * rh + 26, lo = Math.min(...list.map(c => c.contrib)) * 1.1, hi = Math.max(...list.map(c => c.contrib_prorr)) * 1.1,
+        x = v => L + (W - L - Rr) * (v - lo) / (hi - lo);
+  let o = '';
+  [-400, -200, 0, 200, 400].filter(v => v >= lo && v <= hi).forEach(v => o += `<line x1="${x(v)}" x2="${x(v)}" y1="${Tp - 8}" y2="${H - 22}" stroke="${v === 0 ? 'var(--axis)' : 'var(--grid)'}"/><text x="${x(v)}" y="${H - 6}" text-anchor="middle">${sg0(v)}</text>`);
+  list.forEach((c, i) => { const yy = Tp + i * rh + rh / 2;
+    o += `<text x="0" y="${yy + 4}" style="fill:var(--ink)">${esc(c.n)}</text><line x1="${x(c.contrib)}" x2="${x(c.contrib_prorr)}" y1="${yy}" y2="${yy}" stroke="var(--axis)" stroke-width="2"/>`;
+    o += `<circle cx="${x(c.contrib_prorr)}" cy="${yy}" r="5.5" fill="#fff" stroke="var(--muted)" stroke-width="2" data-tip="${esc(c.n)}<br>Prorrateado por ventas: ${sg0(c.contrib_prorr)}"/>`;
+    o += `<circle cx="${x(c.contrib)}" cy="${yy}" r="6" fill="var(--neg)" stroke="#fff" stroke-width="1.5" data-tip="${esc(c.n)}<br>Por actividad: ${sg0(c.contrib)}<br>Diferencia: ${m0(c.contrib_prorr - c.contrib)}"/>`; });
+  $('#prorr').innerHTML = `<div class="scroll"><svg viewBox="0 0 ${W} ${H}" style="min-width:600px" role="img">${o}</svg></div>`;
+  const tot = list.reduce((a, c) => a + c.contrib_prorr - c.contrib, 0);
+  $('#lProrr').innerHTML = `Repartiendo el costo de servir por ventas, los ${list.length} clientes que pierden aparecen con ganancia. La diferencia es de $ ${M(tot)} M por mes que el prorrateo les pasa a los clientes grandes y bien atendidos. El prorrateo supone que vender $ 1 cuesta lo mismo en cualquier cliente, y eso no pasa.`;
+}
+function simular() {
+  const minB = +$('#sMin').value, perd = +$('#sPerd').value / 100, cargo = +$('#sUrg').value, plazo = +$('#sPlazo').value;
+  $('#vMin').textContent = minB ? `${minB} bultos` : 'sin pedido mínimo'; $('#vPerd').textContent = pc(perd, 0); $('#vUrg').textContent = cargo ? `$ ${cargo} mil` : 'sin cargo'; $('#vPlazo').textContent = plazo + ' días';
+  let c0 = 0, c1 = 0, neg = 0, vis0 = 0, vis1 = 0, vperd = 0, afect = 0;
+  R.clientes.forEach(c => {
+    const b = costear(c, T0, base); c0 += b.contrib; vis0 += b.visitas;
+    const o = {}; let f = 1, extra = 0;
+    if (minB && c.bxp < minB) { f = 1 - perd; afect++; o.ventas = c.ventas * f; o.mb = c.mb * f; o.bultos = c.bultos * f; o.devoluciones = c.devoluciones * f; o.pedidos = Math.min(c.pedidos, Math.max(1, o.bultos / minB)); vperd += c.ventas - o.ventas; }
+    if (cargo) { o.urgentes = c.urgentes * .5; extra = o.urgentes * cargo; }
+    if (plazo < 60) o.dias = Math.min(c.dias_cobro, plazo);
+    const r = costear(c, T0, base, o); const ct = r.contrib + extra; c1 += ct; vis1 += r.visitas; if (ct < 0) neg++;
+  });
+  const camion = (vis0 - vis1) / (T.visitas / P.camiones);
+  $('#simK').innerHTML = [['Contribución por mes', '$ ' + M(c1) + ' M', `${sg0((c1 - c0))} contra hoy`], ['Clientes que pierden', `${neg}`, `hoy ${T.negativos}`],
+    ['Visitas que se liberan', m0(vis0 - vis1), `≈ ${m1(camion)} camiones de ${P.camiones}`], ['Ventas que se pierden', '$ ' + m0(vperd) + ' mil', `${afect} clientes con pedido mínimo`]]
+    .map(([k, v, d]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="k">${d}</div></div>`).join('');
+  $('#simL').innerHTML = (minB || cargo || plazo < 60) ? `Con estas medidas la contribución cambia ${sg0(c1 - c0)} mil por mes${minB ? `; el pedido mínimo toca a ${afect} clientes y libera ${m0(vis0 - vis1)} visitas, casi ${m1(camion)} camiones: ese ahorro se cobra solo si se achica la flota o las horas` : ''}.` : 'Mové las palancas. Por ejemplo, un pedido mínimo de 10 bultos con un 5 % de ventas perdidas y un plazo máximo de 30 días.';
+}
+function metodo() {
+  const cu = R.cuentas.map(c => `<tr><td class="txt">${esc(c.cuenta)}</td><td class="txt">${c.actividad}</td><td>${m0(c.monto)}</td></tr>`).join('');
+  const ta = R.tasas.map(t => `<tr><td class="txt">${t.act} · ${t.driver}<span class="desc">${t.base}</span></td><td>${m0(t.costo)}</td><td>${m0(t.cant)}</td><td><b>${nf(2).format(t.tasa)}</b><span class="desc">${t.unidad}</span></td></tr>`).join('');
+  $('#tTasas').innerHTML = `<table class="chica"><thead><tr><th class="txt">Cuenta</th><th class="txt">Actividad</th><th>Miles $/mes</th></tr></thead><tbody>${cu}</tbody></table><table class="chica" style="margin-top:12px"><thead><tr><th class="txt">Actividad · driver</th><th>Costo</th><th>Cantidad</th><th>Tasa (miles $)</th></tr></thead><tbody>${ta}</tbody></table>`;
+}
+function sensibilidad() {
+  const cr = { ...base, pp: +$('#sPP').value / 100, rp: +$('#sRP').value / 100, fin: +$('#sFin').value / 100 };
+  $('#vPP').textContent = pc(cr.pp, 0); $('#vRP').textContent = pc(cr.rp, 0); $('#vFin').textContent = pc(cr.fin, 1);
+  const t = tasas(cr), negBase = new Set(R.clientes.filter(c => c.contrib < 0).map(c => c.id));
+  let neg = 0, siguen = 0, tot = 0; R.clientes.forEach(c => { const r = costear(c, t, cr); tot += r.contrib; if (r.contrib < 0) { neg++; if (negBase.has(c.id)) siguen++; } });
+  $('#senK').innerHTML = [['Clientes que pierden', neg, `con el criterio base: ${T.negativos}`], ['De los ' + T.negativos + ' de hoy, siguen', siguen, pc(siguen / T.negativos, 0)], ['Contribución total', '$ ' + M(tot) + ' M', 'base $ ' + M(T.contrib) + ' M']]
+    .map(([k, v, d]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="k">${d}</div></div>`).join('');
+  $('#senL').innerHTML = siguen / T.negativos >= .7 ? 'La conclusión resiste: con criterios razonables distintos, la mayoría de los que pierden siguen perdiendo. Cambia el monto, no la lista.' : 'Con este criterio la lista cambia bastante: vale la pena relevar mejor esta actividad antes de decidir sobre clientes puntuales.';
+}
+
+/* ---------- arranque ---------- */
+encabezado(); ballena(); dispersion(); porTipo(); metodo();
+$('#fTipo').innerHTML = '<option value="">Todos</option>' + TIPOS.map(t => `<option>${t}</option>`).join('');
+$('#fZona').innerHTML = '<option value="">Todas</option>' + ['Centro', 'Norte', 'Sur', 'Oeste'].map(t => `<option>${t}</option>`).join('');
+['#fTipo', '#fZona', '#fNeg'].forEach(s => $(s).onchange = ranking);
+detalle([...R.clientes].filter(c => c.contrib < 0).sort((a, b) => a.rk_mb - b.rk_mb)[0].id);
+ranking(); prorrateo(); simular(); sensibilidad();
+['#sMin', '#sPerd', '#sUrg', '#sPlazo'].forEach(s => $(s).oninput = simular);
+['#sPP', '#sRP', '#sFin'].forEach(s => $(s).oninput = sensibilidad);
+tips(document.body);
+const _det = detalle; detalle = id => { _det(id); tips($('#wfCli')); };
+</script>
+</body>
+</html>

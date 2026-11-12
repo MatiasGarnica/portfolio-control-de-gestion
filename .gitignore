@@ -31,6 +31,7 @@ desktop.ini
 *.mdf
 
 # Output / temp
+casos/*/02_codigo/salida/
 output/
 temp/
 *.log

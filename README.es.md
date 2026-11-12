@@ -47,6 +47,18 @@ El cierre 2026 y la base del presupuesto 2027 de la misma cadena. Antes de elegi
 
 ▶ [Ver el tablero](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/06_pronostico-con-metodo/03_tableros/pronostico.html) · [Método y criterios](casos/06_pronostico-con-metodo/07_docs/metodo_y_criterios.md)
 
+### Costo de servir por cliente · ¿qué cliente deja plata de verdad?
+
+![Costo de servir por cliente](casos/07_costo-de-servir/03_tableros/captura_tablero.png)
+
+Un mayorista que reparte a 80 comercios con camiones propios. Cada costo se asigna con su driver (pedido, bulto, visita, km, días de cobro, devoluciones), con tasas que salen del estado de resultados:
+- **18 de 80 clientes no cubren lo que cuesta atenderlos:** pierden $ 2,8 M por mes. El margen bruto ordena al revés: el kiosco tiene el mejor margen bruto y, después de servir, queda entre los peores.
+- **El prorrateo por ventas, que es lo habitual, no muestra a ninguno de los 18.** El tablero pone los dos criterios lado a lado.
+- **Simulador de palancas:** pedido mínimo, plazo máximo y cargo por urgente suben la contribución $ 8,0 M por mes. El ahorro es real solo si se liberan camiones, y el simulador lo muestra.
+- **Sensibilidad:** con criterios extremos de reparto, al menos 13 de los 18 siguen perdiendo. Cambia el monto, no la conclusión.
+
+▶ [Ver el tablero](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/07_costo-de-servir/03_tableros/costo_de_servir.html) · [Método y criterios](casos/07_costo-de-servir/07_docs/metodo_y_criterios.md)
+
 ### Voz de primera línea · ¿cae el mercado o cae la gestión?
 
 Un formulario de un minuto para repartidores y atención al cliente, con categorías fijas, cruzado con las ventas por ruta. Separa la caída que viene del mercado (todas las rutas reportan "situación económica") de la que es propia de una ruta (una sola reporta "competencia"). Incluye un Apps Script que arma el resumen y la alerta de cada lunes.

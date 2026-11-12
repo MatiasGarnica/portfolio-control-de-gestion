@@ -47,6 +47,18 @@ Year-end 2026 landing and the baseline for the 2027 budget of the same chain. Be
 
 ▶ [Dashboard](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/06_pronostico-con-metodo/03_tableros/pronostico.html) · [Method notes (Spanish)](casos/06_pronostico-con-metodo/07_docs/metodo_y_criterios.md)
 
+### Cost to serve by customer · which customer really makes money?
+
+![Cost to serve by customer](casos/07_costo-de-servir/03_tableros/captura_tablero.png)
+
+A wholesaler delivering to 80 shops with its own trucks. Each cost is assigned by its driver (order, case, stop, km, collection days, returns), with rates traced back to the income statement:
+- **18 of 80 customers don't cover what it costs to serve them:** they lose $2.8M a month. Gross margin ranks them backwards: kiosks have the best gross margin and end up among the worst after cost to serve.
+- **Allocating costs by sales, the usual approach, hides all 18.** The dashboard shows both criteria side by side.
+- **Levers simulator:** minimum order, maximum payment terms and a rush-order fee add $8.0M a month in contribution. Savings are real only if trucks are freed, and the simulator shows how many.
+- **Sensitivity:** under extreme allocation assumptions, at least 13 of the 18 still lose money. The amount changes, the conclusion doesn't.
+
+▶ [Dashboard](https://matiasgarnica.github.io/portfolio-control-de-gestion/casos/07_costo-de-servir/03_tableros/costo_de_servir.html) · [Method notes (Spanish)](casos/07_costo-de-servir/07_docs/metodo_y_criterios.md)
+
 ### Front-line feedback · is it the market or management?
 
 A one-minute form for delivery drivers and customer service, with fixed categories, crossed with sales by route. It separates market-driven drops (every route reports "customer economic situation") from route-specific ones (a single route reports "competition"). An Apps Script builds the Monday summary and alert.
